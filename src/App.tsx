@@ -5,23 +5,26 @@ import { executeCard } from './core/executeCard'
 import { getPreviewArray } from './core/getPreviewArray'
 import { isCleared } from './core/isCleared'
 import { veryEasyPuzzles } from './data/puzzles/veryEasy'
+import type { PuzzleDefinition } from './domain/puzzle'
 import type { RuntimeState } from './domain/runtimeState'
 
+function createInitialRuntimeState(
+  puzzle: PuzzleDefinition,
+): RuntimeState {
+  return {
+    currentArray: [...puzzle.start],
+    remainingCards: [...puzzle.hand],
+    usedCards: [],
+    moveCount: 0,
+  }
+}
+
 function App() {
-  const [puzzleIndex] = useState(0)
+  const [puzzleIndex, setPuzzleIndex] = useState(0)
   const puzzle = veryEasyPuzzles[puzzleIndex]
 
-  function createInitialRuntimeState(): RuntimeState {
-    return {
-      currentArray: [...puzzle.start],
-      remainingCards: [...puzzle.hand],
-      usedCards: [],
-      moveCount: 0,
-    }
-  }
-
   const [runtimeState, setRuntimeState] = useState<RuntimeState>(
-    createInitialRuntimeState,
+    () => createInitialRuntimeState(puzzle),
   )
 
   const [hoveredCardId, setHoveredCardId] = useState<string | null>(null)
@@ -44,13 +47,34 @@ function App() {
   }
 
   function handleRestart() {
-    setRuntimeState(createInitialRuntimeState())
+    setRuntimeState(createInitialRuntimeState(puzzle))
+    setHoveredCardId(null)
+  }
+
+  function handlePuzzleChange(nextPuzzleIndex: number) {
+    const nextPuzzle = veryEasyPuzzles[nextPuzzleIndex]
+
+    setPuzzleIndex(nextPuzzleIndex)
+    setRuntimeState(createInitialRuntimeState(nextPuzzle))
     setHoveredCardId(null)
   }
 
   return (
     <main>
       <h1>Array Puzzle</h1>
+
+      <div>
+        {veryEasyPuzzles.map((puzzleOption, index) => (
+          <button
+            key={puzzleOption.id}
+            type="button"
+            onClick={() => handlePuzzleChange(index)}
+            disabled={index === puzzleIndex}
+          >
+            {puzzleOption.id}
+          </button>
+        ))}
+      </div>
 
       <section>
         <h2>{puzzle.id}</h2>
