@@ -7,4 +7,5 @@ export type PuzzleDefinition = {
   target: string[]
   hand: CommandCard[]
   designSolution: Command[]
+  designSteps: number
 }

@@ -26,6 +26,8 @@ export const veryEasyPuzzles: PuzzleDefinition[] = [
         b: 3,
       },
     ],
+
+    designSteps: 1,
   },
 
   {
@@ -66,5 +68,7 @@ export const veryEasyPuzzles: PuzzleDefinition[] = [
         b: 2,
       },
     ],
+
+    designSteps: 2,
   },
 ]
