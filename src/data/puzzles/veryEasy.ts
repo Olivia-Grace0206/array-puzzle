@@ -69,6 +69,13 @@ export const veryEasyPuzzles: PuzzleDefinition[] = [
       },
     ],
 
+    assistConfig: {
+        orderHint: {
+            cardId: 've-2-card-2',
+            step: 2,
+        },
+    },
+
     designSteps: 2,
   },
 
@@ -101,12 +108,12 @@ export const veryEasyPuzzles: PuzzleDefinition[] = [
     designSteps: 1,
   },
 
-  {
+    {
     id: 'VE-4',
 
     start: ['A', 'B', 'C', 'D', 'E', 'F'],
 
-    target: ['A', 'D', 'B', 'C', 'E', 'F'],
+    target: ['A', 'D', 'E', 'B', 'C', 'F'],
 
     hand: [
         {
@@ -114,8 +121,8 @@ export const veryEasyPuzzles: PuzzleDefinition[] = [
         command: {
             type: 'ROTATE',
             l: 1,
-            r: 3,
-            k: 1,
+            r: 4,
+            k: 2,
         },
         },
     ],
@@ -124,8 +131,8 @@ export const veryEasyPuzzles: PuzzleDefinition[] = [
         {
         type: 'ROTATE',
         l: 1,
-        r: 3,
-        k: 1,
+        r: 4,
+        k: 2,
         },
     ],
 
@@ -169,7 +176,12 @@ export const veryEasyPuzzles: PuzzleDefinition[] = [
         r: 4,
         },
     ],
-
+    assistConfig: {
+        orderHint: {
+            cardId: 've-5-card-2',
+        step: 2,
+        },
+    },
     designSteps: 2,
     },
 ]

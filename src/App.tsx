@@ -5,9 +5,15 @@ import { calculateStars } from './core/calculateStars'
 import { executeCard } from './core/executeCard'
 import { getPreviewArray } from './core/getPreviewArray'
 import { isCleared } from './core/isCleared'
+import { easyPuzzles } from './data/puzzles/easy'
 import { veryEasyPuzzles } from './data/puzzles/veryEasy'
 import type { PuzzleDefinition } from './domain/puzzle'
 import type { RuntimeState } from './domain/runtimeState'
+
+const fixedPuzzles = [
+  ...veryEasyPuzzles,
+  ...easyPuzzles,
+]
 
 function createInitialRuntimeState(
   puzzle: PuzzleDefinition,
@@ -22,7 +28,7 @@ function createInitialRuntimeState(
 
 function App() {
   const [puzzleIndex, setPuzzleIndex] = useState(0)
-  const puzzle = veryEasyPuzzles[puzzleIndex]
+  const puzzle = fixedPuzzles[puzzleIndex]
 
   const [runtimeState, setRuntimeState] = useState<RuntimeState>(
     () => createInitialRuntimeState(puzzle),
@@ -46,7 +52,7 @@ function App() {
   )
 
   const hasNextPuzzle =
-    puzzleIndex < veryEasyPuzzles.length - 1
+    puzzleIndex < fixedPuzzles.length - 1
 
   function handleExecute(cardId: string) {
     setRuntimeState((currentState) =>
@@ -62,7 +68,7 @@ function App() {
   }
 
   function handlePuzzleChange(nextPuzzleIndex: number) {
-    const nextPuzzle = veryEasyPuzzles[nextPuzzleIndex]
+    const nextPuzzle = fixedPuzzles[nextPuzzleIndex]
 
     setPuzzleIndex(nextPuzzleIndex)
     setRuntimeState(createInitialRuntimeState(nextPuzzle))
@@ -82,7 +88,7 @@ function App() {
       <h1>Array Puzzle</h1>
 
       <div>
-        {veryEasyPuzzles.map((puzzleOption, index) => (
+        {fixedPuzzles.map((puzzleOption, index) => (
           <button
             key={puzzleOption.id}
             type="button"
