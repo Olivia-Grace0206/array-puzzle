@@ -71,4 +71,105 @@ export const veryEasyPuzzles: PuzzleDefinition[] = [
 
     designSteps: 2,
   },
+
+  {
+    id: 'VE-3',
+
+    start: ['A', 'B', 'C', 'D', 'E', 'F'],
+
+    target: ['A', 'E', 'D', 'C', 'B', 'F'],
+
+    hand: [
+      {
+        id: 've-3-card-1',
+        command: {
+          type: 'REVERSE',
+          l: 1,
+          r: 4,
+        },
+      },
+    ],
+
+    designSolution: [
+      {
+        type: 'REVERSE',
+        l: 1,
+        r: 4,
+      },
+    ],
+
+    designSteps: 1,
+  },
+
+  {
+    id: 'VE-4',
+
+    start: ['A', 'B', 'C', 'D', 'E', 'F'],
+
+    target: ['A', 'D', 'B', 'C', 'E', 'F'],
+
+    hand: [
+        {
+        id: 've-4-card-1',
+        command: {
+            type: 'ROTATE',
+            l: 1,
+            r: 3,
+            k: 1,
+        },
+        },
+    ],
+
+    designSolution: [
+        {
+        type: 'ROTATE',
+        l: 1,
+        r: 3,
+        k: 1,
+        },
+    ],
+
+    designSteps: 1,
+    },
+    {
+    id: 'VE-5',
+
+    start: ['A', 'B', 'C', 'D', 'E', 'F'],
+
+    target: ['A', 'E', 'B', 'D', 'C', 'F'],
+
+    hand: [
+        {
+        id: 've-5-card-1',
+        command: {
+            type: 'SWAP',
+            a: 1,
+            b: 4,
+        },
+        },
+        {
+        id: 've-5-card-2',
+        command: {
+            type: 'REVERSE',
+            l: 2,
+            r: 4,
+        },
+        },
+    ],
+
+    designSolution: [
+        {
+        type: 'SWAP',
+        a: 1,
+        b: 4,
+        },
+        {
+        type: 'REVERSE',
+        l: 2,
+        r: 4,
+        },
+    ],
+
+    designSteps: 2,
+    },
 ]
