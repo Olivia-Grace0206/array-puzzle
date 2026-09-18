@@ -8,7 +8,8 @@ import { veryEasyPuzzles } from './data/puzzles/veryEasy'
 import type { RuntimeState } from './domain/runtimeState'
 
 function App() {
-  const puzzle = veryEasyPuzzles[0]
+  const [puzzleIndex] = useState(0)
+  const puzzle = veryEasyPuzzles[puzzleIndex]
 
   function createInitialRuntimeState(): RuntimeState {
     return {
