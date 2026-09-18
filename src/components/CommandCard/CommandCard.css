@@ -1,0 +1,19 @@
+.command-card {
+  padding: 12px 16px;
+
+  border: 2px solid #333;
+  border-radius: 10px;
+
+  background: #ffffff;
+
+  font-size: 16px;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.command-card:disabled {
+  opacity: 0.45;
+  background: #eeeeee;
+  cursor: not-allowed;
+}
