@@ -69,11 +69,17 @@ export const easyPuzzles: PuzzleDefinition[] = [
       },
     ],
 
+    designSolutionCardIds: [
+      'e-1-card-1',
+      'e-1-card-2',
+      'e-1-card-3',
+    ],
+
     assistConfig: {
-        orderHint: {
-            cardId: 'e-1-card-3',
-            step: 3,
-        },
+      orderHint: {
+        cardId: 'e-1-card-3',
+        step: 3,
+      },
     },
 
     designSteps: 3,
