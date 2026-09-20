@@ -1,4 +1,7 @@
-import { useState } from 'react'
+import {
+  useEffect,
+  useState,
+} from 'react'
 import { CommandCard } from './components/CommandCard/CommandCard'
 import { Tile } from './components/Tile/Tile'
 import {
@@ -16,17 +19,35 @@ import {
 import { calculateStars } from './core/calculateStars'
 import { executeCard } from './core/executeCard'
 import { getPreviewArray } from './core/getPreviewArray'
+import {
+  createHandOrderHistory,
+  ensurePuzzleHandOrder,
+  getOrderedHand,
+} from './core/hand/handOrder'
 import { isCleared } from './core/isCleared'
+import {
+  createProgressHistory,
+  getPuzzleProgress,
+  isPuzzleUnlocked,
+  recordPuzzleCleared,
+  recordPuzzleSkipped,
+} from './core/progress/progressHistory'
 import { easyPuzzles } from './data/puzzles/easy'
 import { veryEasyPuzzles } from './data/puzzles/veryEasy'
 import type { AssistHistory } from './domain/assist'
+import type { HandOrderHistory } from './domain/handOrder'
 import type { PuzzleDefinition } from './domain/puzzle'
+import type { ProgressHistory } from './domain/progress'
 import type { RuntimeState } from './domain/runtimeState'
 
 const fixedPuzzles = [
   ...veryEasyPuzzles,
   ...easyPuzzles,
 ]
+
+type AttemptOutcome =
+  | 'PLAYING'
+  | 'SKIPPED'
 
 function createInitialRuntimeState(
   puzzle: PuzzleDefinition,
@@ -57,6 +78,28 @@ function App() {
     () => createAssistHistory(),
   )
 
+  const [
+    handOrderHistory,
+    setHandOrderHistory,
+  ] = useState<HandOrderHistory>(() =>
+    ensurePuzzleHandOrder(
+      createHandOrderHistory(),
+      fixedPuzzles[0],
+    ),
+  )
+
+  const [
+    progressHistory,
+    setProgressHistory,
+  ] = useState<ProgressHistory>(
+    () => createProgressHistory(),
+  )
+
+  const [
+    attemptOutcome,
+    setAttemptOutcome,
+  ] = useState<AttemptOutcome>('PLAYING')
+
   const [hoveredCardId, setHoveredCardId] =
     useState<string | null>(null)
 
@@ -74,6 +117,12 @@ function App() {
     runtimeState.currentArray,
     puzzle.target,
   )
+
+  const skipped =
+    attemptOutcome === 'SKIPPED'
+
+  const attemptFinished =
+    cleared || skipped
 
   const usedAssistTypes = getUsedAssistTypes(
     assistHistory,
@@ -121,10 +170,79 @@ function App() {
     cleared,
   )
 
+  const displayedHand = getOrderedHand(
+    handOrderHistory,
+    puzzle,
+  )
+
   const hasNextPuzzle =
     puzzleIndex < fixedPuzzles.length - 1
 
+  useEffect(() => {
+    if (!cleared) {
+      return
+    }
+
+    setProgressHistory(
+      (currentHistory) =>
+        recordPuzzleCleared(
+          currentHistory,
+          puzzle.id,
+          stars,
+        ),
+    )
+  }, [
+    cleared,
+    puzzle.id,
+    stars,
+  ])
+
+  function openPuzzle(
+    nextPuzzleIndex: number,
+  ) {
+    const nextPuzzle =
+      fixedPuzzles[nextPuzzleIndex]
+
+    setHandOrderHistory(
+      (currentHistory) =>
+        ensurePuzzleHandOrder(
+          currentHistory,
+          nextPuzzle,
+        ),
+    )
+
+    setPuzzleIndex(nextPuzzleIndex)
+
+    setRuntimeState(
+      createInitialRuntimeState(nextPuzzle),
+    )
+
+    setAttemptOutcome('PLAYING')
+    setHoveredCardId(null)
+    setAssistNotice(null)
+  }
+
+  function handlePuzzleSelect(
+    nextPuzzleIndex: number,
+  ) {
+    if (
+      !isPuzzleUnlocked(
+        fixedPuzzles,
+        nextPuzzleIndex,
+        progressHistory,
+      )
+    ) {
+      return
+    }
+
+    openPuzzle(nextPuzzleIndex)
+  }
+
   function handleExecute(cardId: string) {
+    if (attemptFinished) {
+      return
+    }
+
     setRuntimeState((currentState) =>
       executeCard(currentState, cardId),
     )
@@ -138,22 +256,7 @@ function App() {
       createInitialRuntimeState(puzzle),
     )
 
-    setHoveredCardId(null)
-    setAssistNotice(null)
-  }
-
-  function handlePuzzleChange(
-    nextPuzzleIndex: number,
-  ) {
-    const nextPuzzle =
-      fixedPuzzles[nextPuzzleIndex]
-
-    setPuzzleIndex(nextPuzzleIndex)
-
-    setRuntimeState(
-      createInitialRuntimeState(nextPuzzle),
-    )
-
+    setAttemptOutcome('PLAYING')
     setHoveredCardId(null)
     setAssistNotice(null)
   }
@@ -163,15 +266,40 @@ function App() {
       return
     }
 
-    handlePuzzleChange(puzzleIndex + 1)
+    openPuzzle(puzzleIndex + 1)
+  }
+
+  function handleSkip() {
+    if (attemptFinished) {
+      return
+    }
+
+    const confirmed = window.confirm(
+      'この問題をSkipしますか？\nStarsは0になり、次の問題が解放されます。',
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    setProgressHistory(
+      (currentHistory) =>
+        recordPuzzleSkipped(
+          currentHistory,
+          puzzle.id,
+        ),
+    )
+
+    setAttemptOutcome('SKIPPED')
+    setHoveredCardId(null)
+    setAssistNotice(null)
   }
 
   function handleUseCheck() {
-    if (useCheckCards.length === 0) {
-      setAssistNotice(
-        'USE CHECK: この問題には使わないカードがありません。',
-      )
-
+    if (
+      attemptFinished ||
+      useCheckCards.length === 0
+    ) {
       return
     }
 
@@ -189,11 +317,10 @@ function App() {
   }
 
   function handleOrderCheck() {
-    if (!orderHint) {
-      setAssistNotice(
-        'ORDER CHECK: この問題にはORDER CHECK設定がありません。',
-      )
-
+    if (
+      attemptFinished ||
+      !orderHint
+    ) {
       return
     }
 
@@ -211,6 +338,10 @@ function App() {
   }
 
   function handleNextMove() {
+    if (attemptFinished) {
+      return
+    }
+
     if (nextMoveUsed) {
       setAssistNotice(
         'NEXT MOVE: すでに開示したカードを表示しています。',
@@ -260,20 +391,54 @@ function App() {
 
       <div>
         {fixedPuzzles.map(
-          (puzzleOption, index) => (
-            <button
-              key={puzzleOption.id}
-              type="button"
-              onClick={() =>
-                handlePuzzleChange(index)
-              }
-              disabled={
-                index === puzzleIndex
-              }
-            >
-              {puzzleOption.id}
-            </button>
-          ),
+          (puzzleOption, index) => {
+            const progress =
+              getPuzzleProgress(
+                progressHistory,
+                puzzleOption.id,
+              )
+
+            const unlocked =
+              isPuzzleUnlocked(
+                fixedPuzzles,
+                index,
+                progressHistory,
+              )
+
+            let buttonLabel =
+              puzzleOption.id
+
+            if (!unlocked) {
+              buttonLabel =
+                `LOCKED ${puzzleOption.id}`
+            } else if (
+              progress.status === 'CLEARED'
+            ) {
+              buttonLabel =
+                `${puzzleOption.id} ★${progress.bestStars ?? 0}`
+            } else if (
+              progress.status === 'SKIPPED'
+            ) {
+              buttonLabel =
+                `${puzzleOption.id} SKIPPED`
+            }
+
+            return (
+              <button
+                key={puzzleOption.id}
+                type="button"
+                onClick={() =>
+                  handlePuzzleSelect(index)
+                }
+                disabled={
+                  index === puzzleIndex ||
+                  !unlocked
+                }
+              >
+                {buttonLabel}
+              </button>
+            )
+          },
         )}
       </div>
 
@@ -288,7 +453,7 @@ function App() {
               type="button"
               onClick={handleUseCheck}
               disabled={
-                cleared ||
+                attemptFinished ||
                 useCheckCards.length === 0
               }
             >
@@ -300,7 +465,8 @@ function App() {
               type="button"
               onClick={handleOrderCheck}
               disabled={
-                cleared || !orderHint
+                attemptFinished ||
+                !orderHint
               }
             >
               ORDER CHECK
@@ -310,7 +476,7 @@ function App() {
             <button
               type="button"
               onClick={handleNextMove}
-              disabled={cleared}
+              disabled={attemptFinished}
             >
               NEXT MOVE
               {nextMoveUsed ? ' ✓' : ''}
@@ -399,6 +565,29 @@ function App() {
           </div>
         )}
 
+        {skipped && (
+          <div>
+            <strong>SKIPPED</strong>
+
+            <div>
+              <strong>STARS: 0</strong>
+            </div>
+
+            {hasNextPuzzle && (
+              <div>
+                <button
+                  type="button"
+                  onClick={
+                    handleNextPuzzle
+                  }
+                >
+                  NEXT PUZZLE
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         <div>
           <strong>
             MOVES:{' '}
@@ -413,13 +602,21 @@ function App() {
           >
             RESTART
           </button>
+
+          <button
+            type="button"
+            onClick={handleSkip}
+            disabled={attemptFinished}
+          >
+            SKIP
+          </button>
         </div>
 
         <div>
           <strong>HAND</strong>
 
           <div>
-            {puzzle.hand.map((card) => {
+            {displayedHand.map((card) => {
               const isUsed =
                 runtimeState.usedCards.some(
                   (usedCard) =>
@@ -436,7 +633,10 @@ function App() {
                 <CommandCard
                   key={card.id}
                   card={card}
-                  disabled={isUsed}
+                  disabled={
+                    isUsed ||
+                    attemptFinished
+                  }
                   isExcludedByUseCheck={revealedUnusedCardIds.has(
                     card.id,
                   )}
