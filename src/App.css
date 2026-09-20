@@ -2105,3 +2105,36 @@
 
   transform: translateY(-3px);
 }
+
+/* ========================================
+   Phase 9
+   Generated Quality Summary
+   ======================================== */
+
+.generated-quality-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+
+  margin-top: 5px;
+}
+
+.generated-quality-summary span {
+  padding: 2px 7px;
+
+  border: 1px solid #cfd8e8;
+  border-radius: 999px;
+
+  color: #52617a;
+  background: #f4f7fc;
+
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1.35;
+}
+
+.generated-quality-summary strong {
+  color: #294f85;
+  font-size: inherit;
+}

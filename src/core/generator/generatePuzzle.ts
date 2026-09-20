@@ -2,6 +2,8 @@ import type { Command } from '../../domain/command'
 import type { CommandCard } from '../../domain/commandCard'
 import type { PuzzleDefinition } from '../../domain/puzzle'
 import { applyCommand } from '../commands/applyCommand'
+import { analyzePuzzleQuality } from '../quality/analyzePuzzleQuality'
+import type { PuzzleQualityReport } from '../../domain/puzzleQuality'
 
 export const GENERATOR_DIFFICULTIES = [
   'EASY',
@@ -16,6 +18,13 @@ export type GeneratorDifficulty =
 export type GeneratePuzzleOptions = {
   difficulty: GeneratorDifficulty
   seed: number
+}
+
+export type GeneratedPuzzleResult = {
+  puzzle: PuzzleDefinition
+  qualityReport: PuzzleQualityReport
+  requestedDifficulty: GeneratorDifficulty
+  generationAttempts: number
 }
 
 export type GeneratorPreset = {
@@ -486,7 +495,7 @@ function createCardId(
   ].join('-')
 }
 
-export function generatePuzzle({
+function generatePuzzleCandidate({
   difficulty,
   seed,
 }: GeneratePuzzleOptions): PuzzleDefinition {
@@ -576,3 +585,54 @@ export function generatePuzzle({
     },
   }
 }
+
+const MAX_QUALITY_GATE_ATTEMPTS = 200
+
+function createCandidateSeed(seed: number, attempt: number): number {
+  return normalizeGeneratorSeed(
+    seed + Math.imul(attempt, 0x9e3779b1),
+  )
+}
+
+/**
+ * 同じseedとdifficultyから、必ず同じ合格済み問題を返す。
+ * 候補がQuality Gateを通らない場合だけ派生seedで再生成する。
+ */
+export function generatePuzzleWithReport({
+  difficulty,
+  seed,
+}: GeneratePuzzleOptions): GeneratedPuzzleResult {
+  const normalizedSeed = normalizeGeneratorSeed(seed)
+
+  for (let attempt = 0; attempt < MAX_QUALITY_GATE_ATTEMPTS; attempt += 1) {
+    const candidateSeed = createCandidateSeed(normalizedSeed, attempt)
+
+    try {
+      const puzzle = generatePuzzleCandidate({
+        difficulty,
+        seed: candidateSeed,
+      })
+      const qualityReport = analyzePuzzleQuality(puzzle)
+
+      if (qualityReport.accepted) {
+        return {
+          puzzle,
+          qualityReport,
+          requestedDifficulty: difficulty,
+          generationAttempts: attempt + 1,
+        }
+      }
+    } catch {
+      // 生成不能な候補は捨て、次の決定論的な候補を試す。
+    }
+  }
+
+  throw new Error('Quality Gateを通過する問題を生成できませんでした。')
+}
+
+export function generatePuzzle(
+  options: GeneratePuzzleOptions,
+): PuzzleDefinition {
+  return generatePuzzleWithReport(options).puzzle
+}
+

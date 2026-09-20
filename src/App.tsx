@@ -22,7 +22,7 @@ import { executeCard } from './core/executeCard'
 import { getPreviewArray } from './core/getPreviewArray'
 import {
   createRandomSeed,
-  generatePuzzle,
+  generatePuzzleWithReport,
 } from './core/generator/generatePuzzle'
 import {
   ensurePuzzleHandOrder,
@@ -48,6 +48,7 @@ import {
 import type { AssistHistory } from './domain/assist'
 import type { HandOrderHistory } from './domain/handOrder'
 import type { PuzzleDefinition } from './domain/puzzle'
+import type { PuzzleQualityReport } from './domain/puzzleQuality'
 import type { ProgressHistory } from './domain/progress'
 import type { RuntimeState } from './domain/runtimeState'
 
@@ -92,6 +93,13 @@ function App() {
     generatedPuzzle,
     setGeneratedPuzzle,
   ] = useState<PuzzleDefinition | null>(
+    null,
+  )
+
+  const [
+    generatedQualityReport,
+    setGeneratedQualityReport,
+  ] = useState<PuzzleQualityReport | null>(
     null,
   )
 
@@ -383,6 +391,7 @@ function App() {
 
     setPuzzleIndex(nextPuzzleIndex)
     setGeneratedPuzzle(null)
+    setGeneratedQualityReport(null)
 
     setRuntimeState(
       createInitialRuntimeState(nextPuzzle),
@@ -396,12 +405,16 @@ function App() {
   }
 
   function openGeneratedPuzzle() {
-    const nextPuzzle = generatePuzzle({
+    const generated = generatePuzzleWithReport({
       difficulty: 'NORMAL',
       seed: createRandomSeed(),
     })
+    const nextPuzzle = generated.puzzle
 
     setGeneratedPuzzle(nextPuzzle)
+    setGeneratedQualityReport(
+      generated.qualityReport,
+    )
 
     setHandOrderHistory(
       (currentHistory) =>
@@ -861,12 +874,12 @@ function App() {
             <strong>AUTO GENERATE</strong>
 
             <span className="difficulty-description">
-              解が保証された新しい問題を
-              自動生成してプレイします
+              品質判定を通過した、解が保証された
+              新しい問題を生成します
             </span>
 
             <span className="difficulty-stage-count">
-              NORMAL PRESET
+              NORMAL / QUALITY GATED
             </span>
           </button>
         </div>
@@ -993,6 +1006,41 @@ function App() {
             </p>
 
             <h2>{puzzle.id}</h2>
+
+            {generatedQualityReport && (
+              <div
+                className="generated-quality-summary"
+                aria-label="Generated puzzle quality"
+              >
+                <span>
+                  QUALITY{' '}
+                  <strong>
+                    {
+                      generatedQualityReport
+                        .qualityScores
+                        .overall
+                    }
+                  </strong>
+                </span>
+
+                <span>
+                  EST.{' '}
+                  <strong>
+                    {generatedQualityReport
+                      .estimatedDifficulty
+                      .replace('_', ' ')}
+                  </strong>
+                </span>
+
+                {generatedQualityReport.styleTags
+                  .slice(0, 3)
+                  .map((tag) => (
+                    <span key={tag}>
+                      {tag.replace('_', ' ')}
+                    </span>
+                  ))}
+              </div>
+            )}
           </div>
 
           <div className="puzzle-stats">
