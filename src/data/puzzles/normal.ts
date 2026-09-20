@@ -1,0 +1,170 @@
+import type { PuzzleDefinition } from '../../domain/puzzle'
+import {
+  createFixedPuzzle,
+  moveCard,
+  reverseCard,
+  rotateCard,
+  swapCard,
+} from './fixedPuzzleFactory'
+
+const start = [
+  'A',
+  'B',
+  'C',
+  'D',
+  'E',
+  'F',
+  'G',
+]
+
+export const normalPuzzles: PuzzleDefinition[] = [
+  createFixedPuzzle({
+    id: 'N-1',
+    start,
+    target: [
+      'A',
+      'E',
+      'D',
+      'F',
+      'G',
+      'B',
+      'C',
+    ],
+    hand: [
+      swapCard('n-1-card-1', 1, 5),
+      moveCard('n-1-card-2', 6, 2),
+      reverseCard('n-1-card-3', 3, 6),
+      rotateCard('n-1-card-4', 1, 5, 2),
+      reverseCard('n-1-card-5', 0, 3),
+      moveCard('n-1-card-6', 1, 6),
+      rotateCard('n-1-card-7', 2, 6, -1),
+    ],
+    designSolutionCardIds: [
+      'n-1-card-1',
+      'n-1-card-2',
+      'n-1-card-3',
+      'n-1-card-4',
+    ],
+    orderHintStep: 3,
+  }),
+
+  createFixedPuzzle({
+    id: 'N-2',
+    start,
+    target: [
+      'B',
+      'D',
+      'C',
+      'F',
+      'A',
+      'G',
+      'E',
+    ],
+    hand: [
+      rotateCard('n-2-card-1', 0, 6, 2),
+      moveCard('n-2-card-2', 5, 1),
+      swapCard('n-2-card-3', 0, 4),
+      reverseCard('n-2-card-4', 2, 5),
+      swapCard('n-2-card-5', 1, 6),
+      reverseCard('n-2-card-6', 0, 3),
+      moveCard('n-2-card-7', 6, 2),
+    ],
+    designSolutionCardIds: [
+      'n-2-card-1',
+      'n-2-card-2',
+      'n-2-card-3',
+      'n-2-card-4',
+    ],
+    orderHintStep: 4,
+  }),
+
+  createFixedPuzzle({
+    id: 'N-3',
+    start,
+    target: [
+      'A',
+      'G',
+      'E',
+      'F',
+      'C',
+      'D',
+      'B',
+    ],
+    hand: [
+      moveCard('n-3-card-1', 1, 5),
+      rotateCard('n-3-card-2', 2, 6, 3),
+      reverseCard('n-3-card-3', 1, 4),
+      swapCard('n-3-card-4', 2, 6),
+      moveCard('n-3-card-5', 5, 0),
+      rotateCard('n-3-card-6', 0, 4, 1),
+      swapCard('n-3-card-7', 3, 5),
+    ],
+    designSolutionCardIds: [
+      'n-3-card-1',
+      'n-3-card-2',
+      'n-3-card-3',
+      'n-3-card-4',
+    ],
+    orderHintStep: 2,
+  }),
+
+  createFixedPuzzle({
+    id: 'N-4',
+    start,
+    target: [
+      'G',
+      'C',
+      'B',
+      'A',
+      'D',
+      'E',
+      'F',
+    ],
+    hand: [
+      reverseCard('n-4-card-1', 0, 4),
+      moveCard('n-4-card-2', 6, 2),
+      rotateCard('n-4-card-3', 1, 5, -2),
+      swapCard('n-4-card-4', 0, 5),
+      moveCard('n-4-card-5', 1, 6),
+      reverseCard('n-4-card-6', 2, 5),
+      rotateCard('n-4-card-7', 0, 6, 3),
+    ],
+    designSolutionCardIds: [
+      'n-4-card-1',
+      'n-4-card-2',
+      'n-4-card-3',
+      'n-4-card-4',
+    ],
+    orderHintStep: 3,
+  }),
+
+  createFixedPuzzle({
+    id: 'N-5',
+    start,
+    target: [
+      'G',
+      'C',
+      'A',
+      'D',
+      'B',
+      'F',
+      'E',
+    ],
+    hand: [
+      swapCard('n-5-card-1', 0, 6),
+      rotateCard('n-5-card-2', 1, 5, 2),
+      moveCard('n-5-card-3', 4, 1),
+      reverseCard('n-5-card-4', 2, 6),
+      swapCard('n-5-card-5', 1, 4),
+      moveCard('n-5-card-6', 6, 0),
+      rotateCard('n-5-card-7', 2, 5, -1),
+    ],
+    designSolutionCardIds: [
+      'n-5-card-1',
+      'n-5-card-2',
+      'n-5-card-3',
+      'n-5-card-4',
+    ],
+    orderHintStep: 4,
+  }),
+]

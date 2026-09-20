@@ -36,64 +36,16 @@ import {
   recordPuzzleCleared,
   recordPuzzleSkipped,
 } from './core/progress/progressHistory'
-import { easyPuzzles } from './data/puzzles/easy'
-import { veryEasyPuzzles } from './data/puzzles/veryEasy'
+import {
+  difficultyOptions,
+  fixedPuzzles,
+  type DifficultyId,
+} from './data/puzzles/catalog'
 import type { AssistHistory } from './domain/assist'
 import type { HandOrderHistory } from './domain/handOrder'
 import type { PuzzleDefinition } from './domain/puzzle'
 import type { ProgressHistory } from './domain/progress'
 import type { RuntimeState } from './domain/runtimeState'
-
-const fixedPuzzles = [
-  ...veryEasyPuzzles,
-  ...easyPuzzles,
-]
-
-const difficultyOptions = [
-  {
-    id: 'VERY_EASY',
-    label: 'VERY EASY',
-    description:
-      '基本Commandを覚えるチュートリアル',
-    puzzles: veryEasyPuzzles,
-    available: true,
-  },
-  {
-    id: 'EASY',
-    label: 'EASY',
-    description:
-      '複数のCommandを組み合わせる入門問題',
-    puzzles: easyPuzzles,
-    available: true,
-  },
-  {
-    id: 'NORMAL',
-    label: 'NORMAL',
-    description:
-      '選択と順序を本格的に考える問題',
-    puzzles: [],
-    available: false,
-  },
-  {
-    id: 'HARD',
-    label: 'HARD',
-    description:
-      '複雑な手順を見抜く上級問題',
-    puzzles: [],
-    available: false,
-  },
-  {
-    id: 'VERY_HARD',
-    label: 'VERY HARD',
-    description:
-      '最も難しい固定問題',
-    puzzles: [],
-    available: false,
-  },
-] as const
-
-type DifficultyId =
-  (typeof difficultyOptions)[number]['id']
 
 type AppScreen =
   | 'MAIN'
