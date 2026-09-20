@@ -22,7 +22,10 @@ import { executeCard } from './core/executeCard'
 import { getPreviewArray } from './core/getPreviewArray'
 import {
   createRandomSeed,
+  GENERATOR_DIFFICULTIES,
   generatePuzzleWithReport,
+  getGeneratorPreset,
+  type GeneratorDifficulty,
 } from './core/generator/generatePuzzle'
 import {
   ensurePuzzleHandOrder,
@@ -55,12 +58,27 @@ import type { RuntimeState } from './domain/runtimeState'
 type AppScreen =
   | 'MAIN'
   | 'DIFFICULTY'
+  | 'GENERATOR_DIFFICULTY'
   | 'STAGE_SELECT'
   | 'PUZZLE'
 
 type AttemptOutcome =
   | 'PLAYING'
   | 'SKIPPED'
+
+const generatorDifficultyDescriptions: Record<
+  GeneratorDifficulty,
+  string
+> = {
+  EASY:
+    '短い手順と少なめのカードで、生成問題に慣れる難易度です。',
+  NORMAL:
+    'カードの選択と使用順をバランスよく考える標準難易度です。',
+  HARD:
+    '目先の一致だけでは解きにくい、長めの手順を含みます。',
+  VERY_HARD:
+    '仕込みや大きな変化を含む、最も複雑な生成問題です。',
+}
 
 function createInitialRuntimeState(
   puzzle: PuzzleDefinition,
@@ -102,6 +120,11 @@ function App() {
   ] = useState<PuzzleQualityReport | null>(
     null,
   )
+
+  const [
+    selectedGeneratorDifficulty,
+    setSelectedGeneratorDifficulty,
+  ] = useState<GeneratorDifficulty>('NORMAL')
 
   const puzzle =
     generatedPuzzle ??
@@ -406,13 +429,16 @@ function App() {
     setScreen('PUZZLE')
   }
 
-  function openGeneratedPuzzle() {
+  function openGeneratedPuzzle(
+    difficulty: GeneratorDifficulty,
+  ) {
     const generated = generatePuzzleWithReport({
-      difficulty: 'NORMAL',
+      difficulty,
       seed: createRandomSeed(),
     })
     const nextPuzzle = generated.puzzle
 
+    setSelectedGeneratorDifficulty(difficulty)
     setGeneratedPuzzle(nextPuzzle)
     setGeneratedQualityReport(
       generated.qualityReport,
@@ -483,7 +509,7 @@ function App() {
     setHoveredCardId(null)
 
     if (isGeneratedPuzzle) {
-      setScreen('DIFFICULTY')
+      setScreen('GENERATOR_DIFFICULTY')
       return
     }
 
@@ -529,7 +555,9 @@ function App() {
 
   function handleNextPuzzle() {
     if (isGeneratedPuzzle) {
-      openGeneratedPuzzle()
+      openGeneratedPuzzle(
+        selectedGeneratorDifficulty,
+      )
       return
     }
 
@@ -678,6 +706,28 @@ function App() {
       )
     }
 
+    if (screen === 'GENERATOR_DIFFICULTY') {
+      return (
+        <div className="header-nav-actions">
+          <button
+            type="button"
+            className="header-nav-button"
+            onClick={handleBackToDifficulty}
+          >
+            DIFFICULTY
+          </button>
+
+          <button
+            type="button"
+            className="header-nav-button"
+            onClick={handleBackToMain}
+          >
+            MAIN
+          </button>
+        </div>
+      )
+    }
+
     if (screen === 'STAGE_SELECT') {
       return (
         <div className="header-nav-actions">
@@ -708,7 +758,7 @@ function App() {
           onClick={handleBackToStages}
         >
           {isGeneratedPuzzle
-            ? 'DIFFICULTY'
+            ? 'GENERATE'
             : 'STAGE SELECT'}
         </button>
 
@@ -867,7 +917,11 @@ function App() {
           <button
             type="button"
             className="difficulty-card difficulty-card-generated"
-            onClick={openGeneratedPuzzle}
+            onClick={() =>
+              setScreen(
+                'GENERATOR_DIFFICULTY',
+              )
+            }
           >
             <span className="difficulty-status">
               ENDLESS
@@ -881,9 +935,86 @@ function App() {
             </span>
 
             <span className="difficulty-stage-count">
-              NORMAL / QUALITY GATED
+              4 DIFFICULTIES / QUALITY GATED
             </span>
           </button>
+        </div>
+      </section>
+    )
+  }
+
+  function renderGeneratorDifficultyScreen() {
+    return (
+      <section className="menu-screen">
+        <div className="menu-heading">
+          <p className="menu-kicker">
+            AUTO GENERATE
+          </p>
+
+          <h2>Choose Generated Difficulty</h2>
+
+          <p>
+            生成する問題の難易度を選んでください。
+            すべて解保証・Quality Gate通過済みです。
+          </p>
+        </div>
+
+        <div className="difficulty-grid generator-difficulty-grid">
+          {GENERATOR_DIFFICULTIES.map(
+            (difficulty) => {
+              const preset =
+                getGeneratorPreset(difficulty)
+              const difficultyClass =
+                difficulty
+                  .toLowerCase()
+                  .replace('_', '-')
+
+              return (
+                <button
+                  key={difficulty}
+                  type="button"
+                  className={[
+                    'difficulty-card',
+                    'difficulty-card-generated',
+                    'generator-difficulty-card',
+                    `generator-difficulty-${difficultyClass}`,
+                  ].join(' ')}
+                  onClick={() =>
+                    openGeneratedPuzzle(
+                      difficulty,
+                    )
+                  }
+                >
+                  <span className="difficulty-status">
+                    GENERATED
+                  </span>
+
+                  <strong>
+                    {difficulty.replace(
+                      '_',
+                      ' ',
+                    )}
+                  </strong>
+
+                  <span className="difficulty-description">
+                    {
+                      generatorDifficultyDescriptions[
+                        difficulty
+                      ]
+                    }
+                  </span>
+
+                  <span className="difficulty-stage-count">
+                    {preset.designSteps} STEPS /{' '}
+                    {preset.designSteps +
+                      preset.extraCardCount}{' '}
+                    CARDS / ARRAY{' '}
+                    {preset.arrayLength}
+                  </span>
+                </button>
+              )
+            },
+          )}
         </div>
       </section>
     )
@@ -1022,6 +1153,14 @@ function App() {
                         .qualityScores
                         .overall
                     }
+                  </strong>
+                </span>
+
+                <span>
+                  SELECTED{' '}
+                  <strong>
+                    {selectedGeneratorDifficulty
+                      .replace('_', ' ')}
                   </strong>
                 </span>
 
@@ -1409,6 +1548,10 @@ function App() {
 
         {screen === 'DIFFICULTY' &&
           renderDifficultyScreen()}
+
+        {screen ===
+          'GENERATOR_DIFFICULTY' &&
+          renderGeneratorDifficultyScreen()}
 
         {screen === 'STAGE_SELECT' &&
           renderStageSelectScreen()}

@@ -2138,3 +2138,62 @@
   color: #294f85;
   font-size: inherit;
 }
+
+/* ========================================
+   Generated Difficulty Select
+   ======================================== */
+
+.generator-difficulty-grid {
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+}
+
+.generator-difficulty-card {
+  padding:
+    clamp(16px, 2.5vh, 23px)
+    clamp(17px, 2vw, 25px);
+}
+
+.generator-difficulty-easy:not(:disabled) {
+  border-color: #8eb99a;
+  color: #315d3d;
+  background:
+    linear-gradient(145deg, #f7fcf8, #e4f2e7);
+}
+
+.generator-difficulty-easy:not(:disabled)
+.difficulty-status {
+  color: #2e6840;
+  background: #d7edde;
+}
+
+.generator-difficulty-normal:not(:disabled) {
+  border-color: #8295b8;
+}
+
+.generator-difficulty-hard:not(:disabled) {
+  border-color: #c29a69;
+  color: #694a29;
+  background:
+    linear-gradient(145deg, #fffaf4, #f5e7d5);
+}
+
+.generator-difficulty-hard:not(:disabled)
+.difficulty-status {
+  color: #7b4e20;
+  background: #f2ddc3;
+}
+
+.generator-difficulty-very-hard:not(:disabled) {
+  border-color: #9a85b9;
+  color: #533d72;
+  background:
+    linear-gradient(145deg, #fbf8ff, #ebe3f6);
+}
+
+.generator-difficulty-very-hard:not(:disabled)
+.difficulty-status {
+  color: #5f3d87;
+  background: #e2d5f2;
+}
+
