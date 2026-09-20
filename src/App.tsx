@@ -11,7 +11,6 @@ import {
   getUseCheckCards,
 } from './core/assist/assistHints'
 import {
-  createAssistHistory,
   getRecordedNextMoveCardId,
   getUsedAssistTypes,
   hasAssistBeenUsed,
@@ -22,14 +21,17 @@ import { calculateStars } from './core/calculateStars'
 import { executeCard } from './core/executeCard'
 import { getPreviewArray } from './core/getPreviewArray'
 import {
-  createHandOrderHistory,
   ensurePuzzleHandOrder,
   getOrderedHand,
 } from './core/hand/handOrder'
 import { isCleared } from './core/isCleared'
 import {
-  createProgressHistory,
+  loadGameSave,
+  saveGameSave,
+} from './core/persistence/gameStorage'
+import {
   getPuzzleProgress,
+  isPuzzleCompleted,
   isPuzzleUnlocked,
   recordPuzzleCleared,
   recordPuzzleSkipped,
@@ -47,6 +49,58 @@ const fixedPuzzles = [
   ...easyPuzzles,
 ]
 
+const difficultyOptions = [
+  {
+    id: 'VERY_EASY',
+    label: 'VERY EASY',
+    description:
+      '基本Commandを覚えるチュートリアル',
+    puzzles: veryEasyPuzzles,
+    available: true,
+  },
+  {
+    id: 'EASY',
+    label: 'EASY',
+    description:
+      '複数のCommandを組み合わせる入門問題',
+    puzzles: easyPuzzles,
+    available: true,
+  },
+  {
+    id: 'NORMAL',
+    label: 'NORMAL',
+    description:
+      '選択と順序を本格的に考える問題',
+    puzzles: [],
+    available: false,
+  },
+  {
+    id: 'HARD',
+    label: 'HARD',
+    description:
+      '複雑な手順を見抜く上級問題',
+    puzzles: [],
+    available: false,
+  },
+  {
+    id: 'VERY_HARD',
+    label: 'VERY HARD',
+    description:
+      '最も難しい固定問題',
+    puzzles: [],
+    available: false,
+  },
+] as const
+
+type DifficultyId =
+  (typeof difficultyOptions)[number]['id']
+
+type AppScreen =
+  | 'MAIN'
+  | 'DIFFICULTY'
+  | 'STAGE_SELECT'
+  | 'PUZZLE'
+
 type AttemptOutcome =
   | 'PLAYING'
   | 'SKIPPED'
@@ -63,6 +117,18 @@ function createInitialRuntimeState(
 }
 
 function App() {
+  const [initialSave] = useState(() =>
+    loadGameSave(window.localStorage),
+  )
+
+  const [screen, setScreen] =
+    useState<AppScreen>('MAIN')
+
+  const [
+    selectedDifficultyId,
+    setSelectedDifficultyId,
+  ] = useState<DifficultyId | null>(null)
+
   const [puzzleIndex, setPuzzleIndex] =
     useState(0)
 
@@ -77,24 +143,21 @@ function App() {
     assistHistory,
     setAssistHistory,
   ] = useState<AssistHistory>(
-    () => createAssistHistory(),
+    initialSave.assistHistory,
   )
 
   const [
     handOrderHistory,
     setHandOrderHistory,
-  ] = useState<HandOrderHistory>(() =>
-    ensurePuzzleHandOrder(
-      createHandOrderHistory(),
-      fixedPuzzles[0],
-    ),
+  ] = useState<HandOrderHistory>(
+    initialSave.handOrderHistory,
   )
 
   const [
     progressHistory,
     setProgressHistory,
   ] = useState<ProgressHistory>(
-    () => createProgressHistory(),
+    initialSave.progressHistory,
   )
 
   const [
@@ -108,7 +171,15 @@ function App() {
   const [assistNotice, setAssistNotice] =
     useState<string | null>(null)
 
+  const [
+    skipConfirmationOpen,
+    setSkipConfirmationOpen,
+  ] = useState(false)
+
   const resultDialogRef =
+    useRef<HTMLElement | null>(null)
+
+  const skipDialogRef =
     useRef<HTMLElement | null>(null)
 
   const displayArray = hoveredCardId
@@ -128,6 +199,13 @@ function App() {
 
   const attemptFinished =
     cleared || skipped
+
+  const showClearDialog =
+    screen === 'PUZZLE' && cleared
+
+  const blockingModalOpen =
+    showClearDialog ||
+    skipConfirmationOpen
 
   const usedAssistTypes = getUsedAssistTypes(
     assistHistory,
@@ -183,6 +261,50 @@ function App() {
   const hasNextPuzzle =
     puzzleIndex < fixedPuzzles.length - 1
 
+  const selectedDifficulty =
+    difficultyOptions.find(
+      (difficulty) =>
+        difficulty.id ===
+        selectedDifficultyId,
+    ) ?? null
+
+  const completedPuzzleCount =
+    fixedPuzzles.filter((fixedPuzzle) =>
+      isPuzzleCompleted(
+        progressHistory,
+        fixedPuzzle.id,
+      ),
+    ).length
+
+  const totalBestStars =
+    fixedPuzzles.reduce(
+      (total, fixedPuzzle) =>
+        total +
+        (
+          getPuzzleProgress(
+            progressHistory,
+            fixedPuzzle.id,
+          ).bestStars ?? 0
+        ),
+      0,
+    )
+
+  useEffect(() => {
+    saveGameSave(
+      window.localStorage,
+      {
+        version: 1,
+        assistHistory,
+        handOrderHistory,
+        progressHistory,
+      },
+    )
+  }, [
+    assistHistory,
+    handOrderHistory,
+    progressHistory,
+  ])
+
   useEffect(() => {
     if (!cleared) {
       return
@@ -203,18 +325,74 @@ function App() {
   ])
 
   useEffect(() => {
-    if (!cleared) {
+    if (!showClearDialog) {
       return
     }
 
     resultDialogRef.current?.focus()
-  }, [cleared])
+  }, [showClearDialog])
+
+  useEffect(() => {
+    if (!skipConfirmationOpen) {
+      return
+    }
+
+    skipDialogRef.current?.focus()
+  }, [skipConfirmationOpen])
+
+  function getDifficultyForPuzzle(
+    puzzleId: string,
+  ) {
+    return difficultyOptions.find(
+      (difficulty) =>
+        difficulty.puzzles.some(
+          (difficultyPuzzle) =>
+            difficultyPuzzle.id === puzzleId,
+        ),
+    )
+  }
+
+  function isDifficultyUnlocked(
+    difficultyId: DifficultyId,
+  ): boolean {
+    const difficulty =
+      difficultyOptions.find(
+        (option) =>
+          option.id === difficultyId,
+      )
+
+    if (
+      !difficulty ||
+      !difficulty.available ||
+      difficulty.puzzles.length === 0
+    ) {
+      return false
+    }
+
+    const firstPuzzle =
+      difficulty.puzzles[0]
+
+    const firstPuzzleIndex =
+      fixedPuzzles.findIndex(
+        (fixedPuzzle) =>
+          fixedPuzzle.id === firstPuzzle.id,
+      )
+
+    return isPuzzleUnlocked(
+      fixedPuzzles,
+      firstPuzzleIndex,
+      progressHistory,
+    )
+  }
 
   function openPuzzle(
     nextPuzzleIndex: number,
   ) {
     const nextPuzzle =
       fixedPuzzles[nextPuzzleIndex]
+
+    const nextDifficulty =
+      getDifficultyForPuzzle(nextPuzzle.id)
 
     setHandOrderHistory(
       (currentHistory) =>
@@ -223,6 +401,12 @@ function App() {
           nextPuzzle,
         ),
     )
+
+    if (nextDifficulty) {
+      setSelectedDifficultyId(
+        nextDifficulty.id,
+      )
+    }
 
     setPuzzleIndex(nextPuzzleIndex)
 
@@ -233,26 +417,72 @@ function App() {
     setAttemptOutcome('PLAYING')
     setHoveredCardId(null)
     setAssistNotice(null)
+    setSkipConfirmationOpen(false)
+    setScreen('PUZZLE')
   }
 
-  function handlePuzzleSelect(
-    nextPuzzleIndex: number,
+  function handleDifficultySelect(
+    difficultyId: DifficultyId,
   ) {
+    if (
+      !isDifficultyUnlocked(
+        difficultyId,
+      )
+    ) {
+      return
+    }
+
+    setSelectedDifficultyId(
+      difficultyId,
+    )
+
+    setScreen('STAGE_SELECT')
+  }
+
+  function handleStageSelect(
+    selectedPuzzle: PuzzleDefinition,
+  ) {
+    const selectedPuzzleIndex =
+      fixedPuzzles.findIndex(
+        (fixedPuzzle) =>
+          fixedPuzzle.id ===
+          selectedPuzzle.id,
+      )
+
     if (
       !isPuzzleUnlocked(
         fixedPuzzles,
-        nextPuzzleIndex,
+        selectedPuzzleIndex,
         progressHistory,
       )
     ) {
       return
     }
 
-    openPuzzle(nextPuzzleIndex)
+    openPuzzle(selectedPuzzleIndex)
+  }
+
+  function handleBackToStages() {
+    setSkipConfirmationOpen(false)
+    setHoveredCardId(null)
+    setScreen('STAGE_SELECT')
+  }
+
+  function handleBackToDifficulty() {
+    setSkipConfirmationOpen(false)
+    setScreen('DIFFICULTY')
+  }
+
+  function handleBackToMain() {
+    setSkipConfirmationOpen(false)
+    setScreen('MAIN')
   }
 
   function handleExecute(cardId: string) {
-    if (attemptFinished) {
+    if (
+      attemptFinished ||
+      skipConfirmationOpen
+    ) {
       return
     }
 
@@ -272,10 +502,12 @@ function App() {
     setAttemptOutcome('PLAYING')
     setHoveredCardId(null)
     setAssistNotice(null)
+    setSkipConfirmationOpen(false)
   }
 
   function handleNextPuzzle() {
     if (!hasNextPuzzle) {
+      handleBackToStages()
       return
     }
 
@@ -287,14 +519,15 @@ function App() {
       return
     }
 
-    const confirmed = window.confirm(
-      'この問題をSkipしますか？\nStarsは0になり、次の問題が解放されます。',
-    )
+    setHoveredCardId(null)
+    setSkipConfirmationOpen(true)
+  }
 
-    if (!confirmed) {
-      return
-    }
+  function handleCancelSkip() {
+    setSkipConfirmationOpen(false)
+  }
 
+  function handleConfirmSkip() {
     setProgressHistory(
       (currentHistory) =>
         recordPuzzleSkipped(
@@ -306,6 +539,7 @@ function App() {
     setAttemptOutcome('SKIPPED')
     setHoveredCardId(null)
     setAssistNotice(null)
+    setSkipConfirmationOpen(false)
   }
 
   function handleUseCheck() {
@@ -398,13 +632,694 @@ function App() {
     )
   }
 
+  function renderHeaderActions() {
+    if (screen === 'MAIN') {
+      return null
+    }
+
+    if (screen === 'DIFFICULTY') {
+      return (
+        <button
+          type="button"
+          className="header-nav-button"
+          onClick={handleBackToMain}
+        >
+          MAIN
+        </button>
+      )
+    }
+
+    if (screen === 'STAGE_SELECT') {
+      return (
+        <div className="header-nav-actions">
+          <button
+            type="button"
+            className="header-nav-button"
+            onClick={handleBackToDifficulty}
+          >
+            DIFFICULTY
+          </button>
+
+          <button
+            type="button"
+            className="header-nav-button"
+            onClick={handleBackToMain}
+          >
+            MAIN
+          </button>
+        </div>
+      )
+    }
+
+    return (
+      <div className="header-nav-actions">
+        <button
+          type="button"
+          className="header-nav-button"
+          onClick={handleBackToStages}
+        >
+          STAGE SELECT
+        </button>
+
+        <button
+          type="button"
+          className="header-nav-button"
+          onClick={handleBackToMain}
+        >
+          MAIN
+        </button>
+      </div>
+    )
+  }
+
+  function renderMainScreen() {
+    return (
+      <section className="menu-screen main-screen">
+        <div className="main-hero">
+          <p className="menu-kicker">
+            COMMAND ORDER PUZZLE
+          </p>
+
+          <h2>
+            Choose.
+            <br />
+            Order.
+            <br />
+            Transform.
+          </h2>
+
+          <p className="main-description">
+            Commandカードを選び、
+            正しい順番で配列を目標の形へ変換します。
+          </p>
+
+          <button
+            type="button"
+            className="menu-primary-button"
+            onClick={() =>
+              setScreen('DIFFICULTY')
+            }
+          >
+            PLAY
+          </button>
+        </div>
+
+        <aside className="main-progress-card">
+          <p className="menu-kicker">
+            YOUR PROGRESS
+          </p>
+
+          <div className="main-progress-value">
+            {completedPuzzleCount}
+            <span>
+              / {fixedPuzzles.length}
+            </span>
+          </div>
+
+          <p className="main-progress-label">
+            Stages completed
+          </p>
+
+          <div className="main-progress-divider" />
+
+          <div className="main-star-summary">
+            <span>TOTAL STARS</span>
+
+            <strong>
+              ★ {totalBestStars}
+            </strong>
+          </div>
+        </aside>
+      </section>
+    )
+  }
+
+  function renderDifficultyScreen() {
+    return (
+      <section className="menu-screen">
+        <div className="menu-heading">
+          <p className="menu-kicker">
+            SELECT MODE
+          </p>
+
+          <h2>Choose Difficulty</h2>
+
+          <p>
+            難易度を選んで固定問題へ進みます。
+          </p>
+        </div>
+
+        <div className="difficulty-grid">
+          {difficultyOptions.map(
+            (difficulty) => {
+              const unlocked =
+                isDifficultyUnlocked(
+                  difficulty.id,
+                )
+
+              let statusLabel =
+                'AVAILABLE'
+
+              if (!difficulty.available) {
+                statusLabel =
+                  'COMING SOON'
+              } else if (!unlocked) {
+                statusLabel = 'LOCKED'
+              }
+
+              return (
+                <button
+                  key={difficulty.id}
+                  type="button"
+                  className={[
+                    'difficulty-card',
+                    unlocked
+                      ? 'difficulty-card-available'
+                      : 'difficulty-card-disabled',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  disabled={!unlocked}
+                  onClick={() =>
+                    handleDifficultySelect(
+                      difficulty.id,
+                    )
+                  }
+                >
+                  <span className="difficulty-status">
+                    {statusLabel}
+                  </span>
+
+                  <strong>
+                    {difficulty.label}
+                  </strong>
+
+                  <span className="difficulty-description">
+                    {difficulty.description}
+                  </span>
+
+                  {difficulty.puzzles.length >
+                    0 && (
+                    <span className="difficulty-stage-count">
+                      {
+                        difficulty.puzzles
+                          .length
+                      }{' '}
+                      STAGES
+                    </span>
+                  )}
+                </button>
+              )
+            },
+          )}
+
+          <button
+            type="button"
+            className="difficulty-card difficulty-card-generated"
+            disabled
+          >
+            <span className="difficulty-status">
+              COMING SOON
+            </span>
+
+            <strong>AUTO GENERATE</strong>
+
+            <span className="difficulty-description">
+              検証済みの問題を自動生成する
+              Endlessモード
+            </span>
+          </button>
+        </div>
+      </section>
+    )
+  }
+
+  function renderStageSelectScreen() {
+    if (!selectedDifficulty) {
+      return null
+    }
+
+    return (
+      <section className="menu-screen">
+        <div className="menu-heading">
+          <p className="menu-kicker">
+            {selectedDifficulty.label}
+          </p>
+
+          <h2>Stage Select</h2>
+
+          <p>
+            ClearまたはSkipで次のStageが
+            解放されます。
+          </p>
+        </div>
+
+        <div className="stage-grid">
+          {selectedDifficulty.puzzles.map(
+            (
+              stagePuzzle,
+              difficultyIndex,
+            ) => {
+              const globalIndex =
+                fixedPuzzles.findIndex(
+                  (fixedPuzzle) =>
+                    fixedPuzzle.id ===
+                    stagePuzzle.id,
+                )
+
+              const progress =
+                getPuzzleProgress(
+                  progressHistory,
+                  stagePuzzle.id,
+                )
+
+              const unlocked =
+                isPuzzleUnlocked(
+                  fixedPuzzles,
+                  globalIndex,
+                  progressHistory,
+                )
+
+              return (
+                <button
+                  key={stagePuzzle.id}
+                  type="button"
+                  className={[
+                    'stage-card',
+                    !unlocked
+                      ? 'stage-card-locked'
+                      : '',
+                    progress.status ===
+                    'CLEARED'
+                      ? 'stage-card-cleared'
+                      : '',
+                    progress.status ===
+                    'SKIPPED'
+                      ? 'stage-card-skipped'
+                      : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  disabled={!unlocked}
+                  onClick={() =>
+                    handleStageSelect(
+                      stagePuzzle,
+                    )
+                  }
+                >
+                  <span className="stage-card-number">
+                    {String(
+                      difficultyIndex + 1,
+                    ).padStart(2, '0')}
+                  </span>
+
+                  <strong>
+                    {stagePuzzle.id}
+                  </strong>
+
+                  <span className="stage-card-status">
+                    {!unlocked &&
+                      'LOCKED'}
+
+                    {unlocked &&
+                      progress.status ===
+                        'UNPLAYED' &&
+                      'PLAY'}
+
+                    {progress.status ===
+                      'CLEARED' &&
+                      `★${progress.bestStars ?? 0}`}
+
+                    {progress.status ===
+                      'SKIPPED' &&
+                      'SKIPPED'}
+                  </span>
+                </button>
+              )
+            },
+          )}
+        </div>
+      </section>
+    )
+  }
+
+  function renderPuzzleScreen() {
+    return (
+      <section className="puzzle-screen">
+        <div className="puzzle-heading">
+          <div>
+            <p className="section-eyebrow">
+              CURRENT STAGE
+            </p>
+
+            <h2>{puzzle.id}</h2>
+          </div>
+
+          <div className="puzzle-stats">
+            <div className="stat-item">
+              <span className="stat-label">
+                MOVES
+              </span>
+
+              <strong>
+                {runtimeState.moveCount}
+              </strong>
+            </div>
+
+            <div className="stat-item">
+              <span className="stat-label">
+                ASSISTS
+              </span>
+
+              <strong>
+                {usedAssistTypes.length}
+              </strong>
+            </div>
+          </div>
+        </div>
+
+        <section
+          className="assist-panel"
+          aria-labelledby="assist-title"
+        >
+          <div className="panel-heading">
+            <div>
+              <p className="section-eyebrow">
+                HELP CARDS
+              </p>
+
+              <h3 id="assist-title">
+                ASSIST
+              </h3>
+            </div>
+
+            <span className="assist-cost">
+              1 Assist = −1 Star
+            </span>
+          </div>
+
+          <div className="assist-buttons">
+            <button
+              type="button"
+              className={[
+                'assist-button',
+                useCheckUsed
+                  ? 'assist-button-used'
+                  : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              onClick={handleUseCheck}
+              disabled={
+                attemptFinished ||
+                useCheckCards.length === 0
+              }
+            >
+              <span className="assist-button-name">
+                USE CHECK
+              </span>
+
+              <span className="assist-button-description">
+                使わないカードを表示
+              </span>
+
+              {useCheckUsed && (
+                <span className="assist-used-mark">
+                  USED
+                </span>
+              )}
+            </button>
+
+            <button
+              type="button"
+              className={[
+                'assist-button',
+                orderCheckUsed
+                  ? 'assist-button-used'
+                  : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              onClick={handleOrderCheck}
+              disabled={
+                attemptFinished ||
+                !orderHint
+              }
+            >
+              <span className="assist-button-name">
+                ORDER CHECK
+              </span>
+
+              <span className="assist-button-description">
+                使用順を1枚表示
+              </span>
+
+              {orderCheckUsed && (
+                <span className="assist-used-mark">
+                  USED
+                </span>
+              )}
+            </button>
+
+            <button
+              type="button"
+              className={[
+                'assist-button',
+                nextMoveUsed
+                  ? 'assist-button-used'
+                  : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              onClick={handleNextMove}
+              disabled={attemptFinished}
+            >
+              <span className="assist-button-name">
+                NEXT MOVE
+              </span>
+
+              <span className="assist-button-description">
+                次の正解カードを表示
+              </span>
+
+              {nextMoveUsed && (
+                <span className="assist-used-mark">
+                  USED
+                </span>
+              )}
+            </button>
+          </div>
+
+          <p
+            className={[
+              'assist-notice',
+              assistNotice
+                ? ''
+                : 'assist-notice-idle',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+          >
+            {assistNotice ??
+              'Assistを選ぶと、この問題のStarsが減少します。'}
+          </p>
+        </section>
+
+        <section className="board-panel">
+          <div className="board-row">
+            <div className="board-label">
+              <span className="board-label-main">
+                CURRENT
+              </span>
+
+              <span className="board-label-sub">
+                現在の配列
+              </span>
+            </div>
+
+            <div className="tile-row">
+              {displayArray.map(
+                (value, index) => (
+                  <Tile
+                    key={`current-${index}`}
+                    value={value}
+                    index={index}
+                    isMatched={
+                      value ===
+                      puzzle.target[index]
+                    }
+                    isPreviewChanged={
+                      hoveredCardId !== null &&
+                      value !==
+                        runtimeState
+                          .currentArray[index]
+                    }
+                  />
+                ),
+              )}
+            </div>
+          </div>
+
+          <div className="board-divider" />
+
+          <div className="board-row">
+            <div className="board-label">
+              <span className="board-label-main">
+                TARGET
+              </span>
+
+              <span className="board-label-sub">
+                目標の配列
+              </span>
+            </div>
+
+            <div className="tile-row">
+              {puzzle.target.map(
+                (value, index) => (
+                  <Tile
+                    key={`target-${index}`}
+                    value={value}
+                    index={index}
+                  />
+                ),
+              )}
+            </div>
+          </div>
+        </section>
+
+        {skipped && (
+          <section className="result-panel result-panel-skipped">
+            <div>
+              <p className="result-kicker">
+                STAGE SKIPPED
+              </p>
+
+              <strong className="result-title">
+                SKIPPED
+              </strong>
+            </div>
+
+            <div className="result-stars">
+              0 Stars
+            </div>
+
+            {hasNextPuzzle && (
+              <button
+                type="button"
+                className="result-button"
+                onClick={handleNextPuzzle}
+              >
+                NEXT PUZZLE
+              </button>
+            )}
+          </section>
+        )}
+
+        <div className="play-actions">
+          <button
+            type="button"
+            className="action-button"
+            onClick={handleRestart}
+          >
+            RESTART
+          </button>
+
+          <button
+            type="button"
+            className="action-button action-button-skip"
+            onClick={handleSkip}
+            disabled={attemptFinished}
+          >
+            SKIP
+          </button>
+        </div>
+
+        <section
+          className="hand-panel"
+          aria-labelledby="hand-title"
+        >
+          <div className="hand-heading">
+            <div>
+              <p className="section-eyebrow section-eyebrow-light">
+                CHOOSE A COMMAND
+              </p>
+
+              <h3 id="hand-title">
+                HAND
+              </h3>
+            </div>
+
+            <div className="hand-count">
+              <strong>
+                {
+                  runtimeState
+                    .remainingCards.length
+                }
+              </strong>
+
+              <span>cards remaining</span>
+            </div>
+          </div>
+
+          <div className="hand-cards">
+            {displayedHand.map((card) => {
+              const isUsed =
+                runtimeState.usedCards.some(
+                  (usedCard) =>
+                    usedCard.id === card.id,
+                )
+
+              const orderHintStep =
+                orderCheckUsed &&
+                orderHint?.cardId === card.id
+                  ? orderHint.step
+                  : undefined
+
+              return (
+                <CommandCard
+                  key={card.id}
+                  card={card}
+                  disabled={
+                    isUsed ||
+                    attemptFinished
+                  }
+                  isExcludedByUseCheck={revealedUnusedCardIds.has(
+                    card.id,
+                  )}
+                  orderHintStep={
+                    orderHintStep
+                  }
+                  isNextMoveHint={
+                    nextMoveCardId ===
+                    card.id
+                  }
+                  onHoverStart={
+                    setHoveredCardId
+                  }
+                  onHoverEnd={() =>
+                    setHoveredCardId(null)
+                  }
+                  onExecute={
+                    handleExecute
+                  }
+                />
+              )
+            })}
+          </div>
+        </section>
+      </section>
+    )
+  }
+
   return (
     <>
       <main
         className="app-shell"
-        inert={cleared}
+        inert={blockingModalOpen}
         aria-hidden={
-          cleared ? true : undefined
+          blockingModalOpen
+            ? true
+            : undefined
         }
       >
         <header className="app-header">
@@ -416,422 +1331,23 @@ function App() {
             <h1>Array Puzzle</h1>
           </div>
 
-          <nav
-            className="stage-strip"
-            aria-label="Development stage selector"
-          >
-            {fixedPuzzles.map(
-              (puzzleOption, index) => {
-                const progress =
-                  getPuzzleProgress(
-                    progressHistory,
-                    puzzleOption.id,
-                  )
-
-                const unlocked =
-                  isPuzzleUnlocked(
-                    fixedPuzzles,
-                    index,
-                    progressHistory,
-                  )
-
-                let buttonLabel =
-                  puzzleOption.id
-
-                if (!unlocked) {
-                  buttonLabel =
-                    `LOCKED ${puzzleOption.id}`
-                } else if (
-                  progress.status === 'CLEARED'
-                ) {
-                  buttonLabel =
-                    `${puzzleOption.id} ★${progress.bestStars ?? 0}`
-                } else if (
-                  progress.status === 'SKIPPED'
-                ) {
-                  buttonLabel =
-                    `${puzzleOption.id} SKIPPED`
-                }
-
-                const className = [
-                  'stage-button',
-                  index === puzzleIndex
-                    ? 'stage-button-active'
-                    : '',
-                  !unlocked
-                    ? 'stage-button-locked'
-                    : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')
-
-                return (
-                  <button
-                    key={puzzleOption.id}
-                    type="button"
-                    className={className}
-                    onClick={() =>
-                      handlePuzzleSelect(index)
-                    }
-                    disabled={
-                      index === puzzleIndex ||
-                      !unlocked
-                    }
-                  >
-                    {buttonLabel}
-                  </button>
-                )
-              },
-            )}
-          </nav>
+          {renderHeaderActions()}
         </header>
 
-        <section className="puzzle-screen">
-          <div className="puzzle-heading">
-            <div>
-              <p className="section-eyebrow">
-                CURRENT STAGE
-              </p>
+        {screen === 'MAIN' &&
+          renderMainScreen()}
 
-              <h2>{puzzle.id}</h2>
-            </div>
+        {screen === 'DIFFICULTY' &&
+          renderDifficultyScreen()}
 
-            <div className="puzzle-stats">
-              <div className="stat-item">
-                <span className="stat-label">
-                  MOVES
-                </span>
+        {screen === 'STAGE_SELECT' &&
+          renderStageSelectScreen()}
 
-                <strong>
-                  {runtimeState.moveCount}
-                </strong>
-              </div>
-
-              <div className="stat-item">
-                <span className="stat-label">
-                  ASSISTS
-                </span>
-
-                <strong>
-                  {usedAssistTypes.length}
-                </strong>
-              </div>
-            </div>
-          </div>
-
-          <section
-            className="assist-panel"
-            aria-labelledby="assist-title"
-          >
-            <div className="panel-heading">
-              <div>
-                <p className="section-eyebrow">
-                  HELP CARDS
-                </p>
-
-                <h3 id="assist-title">
-                  ASSIST
-                </h3>
-              </div>
-
-              <span className="assist-cost">
-                1 Assist = −1 Star
-              </span>
-            </div>
-
-            <div className="assist-buttons">
-              <button
-                type="button"
-                className={[
-                  'assist-button',
-                  useCheckUsed
-                    ? 'assist-button-used'
-                    : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-                onClick={handleUseCheck}
-                disabled={
-                  attemptFinished ||
-                  useCheckCards.length === 0
-                }
-              >
-                <span className="assist-button-name">
-                  USE CHECK
-                </span>
-
-                <span className="assist-button-description">
-                  使わないカードを表示
-                </span>
-
-                {useCheckUsed && (
-                  <span className="assist-used-mark">
-                    USED
-                  </span>
-                )}
-              </button>
-
-              <button
-                type="button"
-                className={[
-                  'assist-button',
-                  orderCheckUsed
-                    ? 'assist-button-used'
-                    : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-                onClick={handleOrderCheck}
-                disabled={
-                  attemptFinished ||
-                  !orderHint
-                }
-              >
-                <span className="assist-button-name">
-                  ORDER CHECK
-                </span>
-
-                <span className="assist-button-description">
-                  使用順を1枚表示
-                </span>
-
-                {orderCheckUsed && (
-                  <span className="assist-used-mark">
-                    USED
-                  </span>
-                )}
-              </button>
-
-              <button
-                type="button"
-                className={[
-                  'assist-button',
-                  nextMoveUsed
-                    ? 'assist-button-used'
-                    : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-                onClick={handleNextMove}
-                disabled={attemptFinished}
-              >
-                <span className="assist-button-name">
-                  NEXT MOVE
-                </span>
-
-                <span className="assist-button-description">
-                  次の正解カードを表示
-                </span>
-
-                {nextMoveUsed && (
-                  <span className="assist-used-mark">
-                    USED
-                  </span>
-                )}
-              </button>
-            </div>
-
-            <p
-              className={[
-                'assist-notice',
-                assistNotice
-                  ? ''
-                  : 'assist-notice-idle',
-              ]
-                .filter(Boolean)
-                .join(' ')}
-            >
-              {assistNotice ??
-                'Assistを選ぶと、この問題のStarsが減少します。'}
-            </p>
-          </section>
-
-          <section className="board-panel">
-            <div className="board-row">
-              <div className="board-label">
-                <span className="board-label-main">
-                  CURRENT
-                </span>
-
-                <span className="board-label-sub">
-                  現在の配列
-                </span>
-              </div>
-
-              <div className="tile-row">
-                {displayArray.map(
-                  (value, index) => (
-                    <Tile
-                      key={`current-${index}`}
-                      value={value}
-                      index={index}
-                      isMatched={
-                        value ===
-                        puzzle.target[index]
-                      }
-                      isPreviewChanged={
-                        hoveredCardId !== null &&
-                        value !==
-                          runtimeState
-                            .currentArray[index]
-                      }
-                    />
-                  ),
-                )}
-              </div>
-            </div>
-
-            <div className="board-divider" />
-
-            <div className="board-row">
-              <div className="board-label">
-                <span className="board-label-main">
-                  TARGET
-                </span>
-
-                <span className="board-label-sub">
-                  目標の配列
-                </span>
-              </div>
-
-              <div className="tile-row">
-                {puzzle.target.map(
-                  (value, index) => (
-                    <Tile
-                      key={`target-${index}`}
-                      value={value}
-                      index={index}
-                    />
-                  ),
-                )}
-              </div>
-            </div>
-          </section>
-
-          {skipped && (
-            <section className="result-panel result-panel-skipped">
-              <div>
-                <p className="result-kicker">
-                  STAGE SKIPPED
-                </p>
-
-                <strong className="result-title">
-                  SKIPPED
-                </strong>
-              </div>
-
-              <div className="result-stars">
-                0 Stars
-              </div>
-
-              {hasNextPuzzle && (
-                <button
-                  type="button"
-                  className="result-button"
-                  onClick={handleNextPuzzle}
-                >
-                  NEXT PUZZLE
-                </button>
-              )}
-            </section>
-          )}
-
-          <div className="play-actions">
-            <button
-              type="button"
-              className="action-button"
-              onClick={handleRestart}
-            >
-              RESTART
-            </button>
-
-            <button
-              type="button"
-              className="action-button action-button-skip"
-              onClick={handleSkip}
-              disabled={attemptFinished}
-            >
-              SKIP
-            </button>
-          </div>
-
-          <section
-            className="hand-panel"
-            aria-labelledby="hand-title"
-          >
-            <div className="hand-heading">
-              <div>
-                <p className="section-eyebrow section-eyebrow-light">
-                  CHOOSE A COMMAND
-                </p>
-
-                <h3 id="hand-title">
-                  HAND
-                </h3>
-              </div>
-
-              <div className="hand-count">
-                <strong>
-                  {
-                    runtimeState
-                      .remainingCards.length
-                  }
-                </strong>
-
-                <span>cards remaining</span>
-              </div>
-            </div>
-
-            <div className="hand-cards">
-              {displayedHand.map((card) => {
-                const isUsed =
-                  runtimeState.usedCards.some(
-                    (usedCard) =>
-                      usedCard.id === card.id,
-                  )
-
-                const orderHintStep =
-                  orderCheckUsed &&
-                  orderHint?.cardId === card.id
-                    ? orderHint.step
-                    : undefined
-
-                return (
-                  <CommandCard
-                    key={card.id}
-                    card={card}
-                    disabled={
-                      isUsed ||
-                      attemptFinished
-                    }
-                    isExcludedByUseCheck={revealedUnusedCardIds.has(
-                      card.id,
-                    )}
-                    orderHintStep={
-                      orderHintStep
-                    }
-                    isNextMoveHint={
-                      nextMoveCardId ===
-                      card.id
-                    }
-                    onHoverStart={
-                      setHoveredCardId
-                    }
-                    onHoverEnd={() =>
-                      setHoveredCardId(null)
-                    }
-                    onExecute={
-                      handleExecute
-                    }
-                  />
-                )
-              })}
-            </div>
-          </section>
-        </section>
+        {screen === 'PUZZLE' &&
+          renderPuzzleScreen()}
       </main>
 
-      {cleared && (
+      {showClearDialog && (
         <div className="result-backdrop">
           <section
             ref={resultDialogRef}
@@ -885,15 +1401,78 @@ function App() {
                 RESTART
               </button>
 
-              {hasNextPuzzle && (
-                <button
-                  type="button"
-                  className="clear-dialog-button clear-dialog-button-next"
-                  onClick={handleNextPuzzle}
-                >
-                  NEXT LEVEL
-                </button>
-              )}
+              <button
+                type="button"
+                className="clear-dialog-button clear-dialog-button-next"
+                onClick={handleNextPuzzle}
+              >
+                {hasNextPuzzle
+                  ? 'NEXT LEVEL'
+                  : 'STAGE SELECT'}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {skipConfirmationOpen && (
+        <div className="result-backdrop">
+          <section
+            ref={skipDialogRef}
+            className="clear-dialog skip-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="skip-dialog-title"
+            aria-describedby="skip-dialog-description"
+            tabIndex={-1}
+          >
+            <div
+              className="skip-dialog-icon"
+              aria-hidden="true"
+            >
+              ↷
+            </div>
+
+            <p className="clear-dialog-kicker">
+              SKIP STAGE
+            </p>
+
+            <h2 id="skip-dialog-title">
+              Skip this puzzle?
+            </h2>
+
+            <p
+              id="skip-dialog-description"
+              className="skip-dialog-description"
+            >
+              この問題の獲得Starsは0になります。
+              <br />
+              次のStageは解放され、
+              あとから再挑戦できます。
+            </p>
+
+            <div className="skip-dialog-stars">
+              <span>★</span>
+              <span>★</span>
+              <span>★</span>
+            </div>
+
+            <div className="clear-dialog-actions">
+              <button
+                type="button"
+                className="clear-dialog-button clear-dialog-button-restart"
+                onClick={handleCancelSkip}
+              >
+                CANCEL
+              </button>
+
+              <button
+                type="button"
+                className="clear-dialog-button skip-confirm-button"
+                onClick={handleConfirmSkip}
+              >
+                SKIP
+              </button>
             </div>
           </section>
         </div>
