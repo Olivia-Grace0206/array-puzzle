@@ -1,12 +1,17 @@
 import { useState } from 'react'
 import { CommandCard } from './components/CommandCard/CommandCard'
 import { Tile } from './components/Tile/Tile'
+import {
+  createAssistHistory,
+  getUsedAssistTypes,
+} from './core/assist/assistHistory'
 import { calculateStars } from './core/calculateStars'
 import { executeCard } from './core/executeCard'
 import { getPreviewArray } from './core/getPreviewArray'
 import { isCleared } from './core/isCleared'
 import { easyPuzzles } from './data/puzzles/easy'
 import { veryEasyPuzzles } from './data/puzzles/veryEasy'
+import type { AssistHistory } from './domain/assist'
 import type { PuzzleDefinition } from './domain/puzzle'
 import type { RuntimeState } from './domain/runtimeState'
 
@@ -30,11 +35,25 @@ function App() {
   const [puzzleIndex, setPuzzleIndex] = useState(0)
   const puzzle = fixedPuzzles[puzzleIndex]
 
-  const [runtimeState, setRuntimeState] = useState<RuntimeState>(
-    () => createInitialRuntimeState(puzzle),
+  const [runtimeState, setRuntimeState] =
+    useState<RuntimeState>(
+      () => createInitialRuntimeState(puzzle),
+    )
+
+  /**
+   * Assist履歴はRuntimeStateと分離する。
+   *
+   * Restartや問題切替では変更しないため、
+   * 同じ問題へ戻っても履歴を維持できる。
+   *
+   * Phase 3でAssistボタンと接続する。
+   */
+  const [assistHistory] = useState<AssistHistory>(
+    () => createAssistHistory(),
   )
 
-  const [hoveredCardId, setHoveredCardId] = useState<string | null>(null)
+  const [hoveredCardId, setHoveredCardId] =
+    useState<string | null>(null)
 
   const displayArray = hoveredCardId
     ? getPreviewArray(runtimeState, hoveredCardId)
@@ -45,9 +64,13 @@ function App() {
     puzzle.target,
   )
 
+  const usedAssistTypes = getUsedAssistTypes(
+    assistHistory,
+    puzzle.id,
+  )
+
   const stars = calculateStars(
-    runtimeState.moveCount,
-    puzzle.designSteps,
+    usedAssistTypes,
     cleared,
   )
 
@@ -63,16 +86,32 @@ function App() {
   }
 
   function handleRestart() {
-    setRuntimeState(createInitialRuntimeState(puzzle))
+    /**
+     * RuntimeStateだけを初期化する。
+     * assistHistoryは変更しない。
+     */
+    setRuntimeState(
+      createInitialRuntimeState(puzzle),
+    )
     setHoveredCardId(null)
   }
 
-  function handlePuzzleChange(nextPuzzleIndex: number) {
-    const nextPuzzle = fixedPuzzles[nextPuzzleIndex]
+  function handlePuzzleChange(
+    nextPuzzleIndex: number,
+  ) {
+    const nextPuzzle =
+      fixedPuzzles[nextPuzzleIndex]
 
     setPuzzleIndex(nextPuzzleIndex)
-    setRuntimeState(createInitialRuntimeState(nextPuzzle))
+    setRuntimeState(
+      createInitialRuntimeState(nextPuzzle),
+    )
     setHoveredCardId(null)
+
+    /**
+     * 問題を切り替えても
+     * assistHistoryは変更しない。
+     */
   }
 
   function handleNextPuzzle() {
@@ -88,16 +127,20 @@ function App() {
       <h1>Array Puzzle</h1>
 
       <div>
-        {fixedPuzzles.map((puzzleOption, index) => (
-          <button
-            key={puzzleOption.id}
-            type="button"
-            onClick={() => handlePuzzleChange(index)}
-            disabled={index === puzzleIndex}
-          >
-            {puzzleOption.id}
-          </button>
-        ))}
+        {fixedPuzzles.map(
+          (puzzleOption, index) => (
+            <button
+              key={puzzleOption.id}
+              type="button"
+              onClick={() =>
+                handlePuzzleChange(index)
+              }
+              disabled={index === puzzleIndex}
+            >
+              {puzzleOption.id}
+            </button>
+          ),
+        )}
       </div>
 
       <section>
@@ -107,18 +150,25 @@ function App() {
           <strong>CURRENT</strong>
 
           <div>
-            {displayArray.map((value, index) => (
-              <Tile
-                key={`current-${index}`}
-                value={value}
-                index={index}
-                isMatched={value === puzzle.target[index]}
-                isPreviewChanged={
-                  hoveredCardId !== null &&
-                  value !== runtimeState.currentArray[index]
-                }
-              />
-            ))}
+            {displayArray.map(
+              (value, index) => (
+                <Tile
+                  key={`current-${index}`}
+                  value={value}
+                  index={index}
+                  isMatched={
+                    value === puzzle.target[index]
+                  }
+                  isPreviewChanged={
+                    hoveredCardId !== null &&
+                    value !==
+                      runtimeState.currentArray[
+                        index
+                      ]
+                  }
+                />
+              ),
+            )}
           </div>
         </div>
 
@@ -126,13 +176,15 @@ function App() {
           <strong>TARGET</strong>
 
           <div>
-            {puzzle.target.map((value, index) => (
-              <Tile
-                key={`target-${index}`}
-                value={value}
-                index={index}
-              />
-            ))}
+            {puzzle.target.map(
+              (value, index) => (
+                <Tile
+                  key={`target-${index}`}
+                  value={value}
+                  index={index}
+                />
+              ),
+            )}
           </div>
         </div>
 
@@ -141,7 +193,9 @@ function App() {
             <strong>CLEAR!</strong>
 
             <div>
-              <strong>STARS: {'★'.repeat(stars)}</strong>
+              <strong>
+                STARS: {'★'.repeat(stars)}
+              </strong>
             </div>
 
             {hasNextPuzzle && (
@@ -158,7 +212,9 @@ function App() {
         )}
 
         <div>
-          <strong>MOVES: {runtimeState.moveCount}</strong>
+          <strong>
+            MOVES: {runtimeState.moveCount}
+          </strong>
         </div>
 
         <div>
@@ -175,17 +231,23 @@ function App() {
 
           <div>
             {puzzle.hand.map((card) => {
-              const isUsed = runtimeState.usedCards.some(
-                (usedCard) => usedCard.id === card.id,
-              )
+              const isUsed =
+                runtimeState.usedCards.some(
+                  (usedCard) =>
+                    usedCard.id === card.id,
+                )
 
               return (
                 <CommandCard
                   key={card.id}
                   card={card}
                   disabled={isUsed}
-                  onHoverStart={setHoveredCardId}
-                  onHoverEnd={() => setHoveredCardId(null)}
+                  onHoverStart={
+                    setHoveredCardId
+                  }
+                  onHoverEnd={() =>
+                    setHoveredCardId(null)
+                  }
                   onExecute={handleExecute}
                 />
               )

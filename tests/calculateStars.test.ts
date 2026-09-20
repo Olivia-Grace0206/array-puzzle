@@ -2,28 +2,70 @@ import { describe, expect, it } from 'vitest'
 import { calculateStars } from '../src/core/calculateStars'
 
 describe('calculateStars', () => {
-  it('returns 0 when puzzle is not cleared', () => {
-    expect(calculateStars(1, 1, false)).toBe(0)
+  it('未ClearならAssist数に関係なく0を返す', () => {
+    expect(calculateStars([], false)).toBe(0)
+
+    expect(
+      calculateStars(
+        [
+          'USE_CHECK',
+          'ORDER_CHECK',
+          'NEXT_MOVE',
+        ],
+        false,
+      ),
+    ).toBe(0)
   })
 
-  it('returns 3 when moveCount is equal to designSteps', () => {
-    expect(calculateStars(2, 2, true)).toBe(3)
+  it('Assist未使用でClearすると3を返す', () => {
+    expect(calculateStars([], true)).toBe(3)
   })
 
-  it('returns 3 when moveCount is less than designSteps', () => {
-    expect(calculateStars(1, 2, true)).toBe(3)
+  it('Assistを1種類使用してClearすると2を返す', () => {
+    expect(
+      calculateStars(['USE_CHECK'], true),
+    ).toBe(2)
   })
 
-  it('returns 2 when moveCount is designSteps + 1', () => {
-    expect(calculateStars(3, 2, true)).toBe(2)
+  it('Assistを2種類使用してClearすると1を返す', () => {
+    expect(
+      calculateStars(
+        ['USE_CHECK', 'ORDER_CHECK'],
+        true,
+      ),
+    ).toBe(1)
   })
 
-  it('returns 2 when moveCount is designSteps + 2', () => {
-    expect(calculateStars(4, 2, true)).toBe(2)
+  it('Assistを3種類使用してClearすると0を返す', () => {
+    expect(
+      calculateStars(
+        [
+          'USE_CHECK',
+          'ORDER_CHECK',
+          'NEXT_MOVE',
+        ],
+        true,
+      ),
+    ).toBe(0)
   })
 
-  it('returns 1 when moveCount is designSteps + 3 or more', () => {
-    expect(calculateStars(5, 2, true)).toBe(1)
-    expect(calculateStars(8, 2, true)).toBe(1)
+  it('同じAssistが重複してもStarsを追加で減らさない', () => {
+    expect(
+      calculateStars(
+        ['USE_CHECK', 'USE_CHECK'],
+        true,
+      ),
+    ).toBe(2)
+
+    expect(
+      calculateStars(
+        [
+          'USE_CHECK',
+          'ORDER_CHECK',
+          'ORDER_CHECK',
+        ],
+        true,
+      ),
+    ).toBe(1)
   })
 })

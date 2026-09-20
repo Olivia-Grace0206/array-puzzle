@@ -1,19 +1,16 @@
+import type { AssistType } from '../domain/assist'
+
 export function calculateStars(
-  moveCount: number,
-  designSteps: number,
+  usedAssistTypes: readonly AssistType[],
   isCleared: boolean,
 ): number {
   if (!isCleared) {
     return 0
   }
 
-  if (moveCount <= designSteps) {
-    return 3
-  }
+  const assistCount = new Set(
+    usedAssistTypes,
+  ).size
 
-  if (moveCount <= designSteps + 2) {
-    return 2
-  }
-
-  return 1
+  return Math.max(0, 3 - assistCount)
 }
