@@ -290,6 +290,8 @@ function App() {
       return
     }
 
+    // Clear成立を監視し、Campaign進行を一度だけ同期するEffect。
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setProgressHistory(
       (currentHistory) =>
         recordPuzzleCleared(
@@ -1565,3 +1567,4 @@ function App() {
 }
 
 export default App
+

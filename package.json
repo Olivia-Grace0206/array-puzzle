@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "test": "vitest",
+    "simulate": "node scripts/runGeneratorSimulation.mjs --samples 10000",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -30,3 +31,4 @@
     "vitest": "^5.0.1"
   }
 }
+

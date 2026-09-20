@@ -131,6 +131,7 @@ export function analyzePuzzleQuality(
   const designCardIds = new Set(puzzle.designSolutionCardIds)
   const extraCards = puzzle.hand.filter((card) => !designCardIds.has(card.id))
   const attractiveExtraCardIds: string[] = []
+  const attractiveExtraMetrics: StructuralMetrics[] = []
   const uselessExtraCardIds: string[] = []
 
   for (const card of extraCards) {
@@ -139,6 +140,7 @@ export function analyzePuzzleQuality(
 
     if (isImmediatelyAttractive(metrics, startMetrics)) {
       attractiveExtraCardIds.push(card.id)
+      attractiveExtraMetrics.push(metrics)
     }
     if (isClearlyUseless(metrics, startMetrics)) {
       uselessExtraCardIds.push(card.id)
@@ -170,13 +172,19 @@ export function analyzePuzzleQuality(
     stepMetrics[stepMetrics.length - 1]?.scoreDelta ?? 0
   const priorDeltas = stepMetrics.slice(1, -1).map((step) => step.scoreDelta)
   const largestPriorDelta = Math.max(0, ...priorDeltas)
-  const adjacentPairBuildSteps = stepMetrics
-    .slice(1)
+  const preFinalStepMetrics = stepMetrics.slice(1, -1)
+  const preFinalAdjacentPairBuildSteps = preFinalStepMetrics
     .filter(
       (step, index) =>
         step.metrics.targetAdjacentPairs >
         stepMetrics[index].metrics.targetAdjacentPairs,
     ).length
+  const strongestInterimBlock = Math.max(
+    0,
+    ...preFinalStepMetrics.map(
+      (step) => step.metrics.longestTargetBlock,
+    ),
+  )
 
   const duplicateEffects =
     new Set(
@@ -235,6 +243,10 @@ export function analyzePuzzleQuality(
   const secondHalfImprovement = stepMetrics
     .slice(firstHalfEnd + 1)
     .reduce((sum, step) => sum + Math.max(0, step.scoreDelta), 0)
+  const firstHalfHasSetupStep = stepMetrics
+    .slice(1, firstHalfEnd + 1)
+    .some((step) => step.scoreDelta <= 0)
+  const firstDesignScore = stepMetrics[1]?.metrics.score ?? 100
 
   const styleTags: PuzzleStyleTag[] = []
   if (
@@ -243,8 +255,17 @@ export function analyzePuzzleQuality(
   ) {
     styleTags.push('PROGRESSIVE')
   }
-  if (attractiveExtraCardIds.length > 0 && extraCards.length >= 2) {
-    styleTags.push('AMBIGUOUS', 'TRAP')
+  if (attractiveExtraCardIds.length >= 2) {
+    styleTags.push('AMBIGUOUS')
+  }
+  if (
+    attractiveExtraMetrics.some(
+      (metrics) =>
+        metrics.score >= firstDesignScore ||
+        metrics.score >= startMetrics.score + 12,
+    )
+  ) {
+    styleTags.push('TRAP')
   }
   if (regressedStepCount > 0) {
     styleTags.push('SACRIFICE')
@@ -252,15 +273,23 @@ export function analyzePuzzleQuality(
   if (commandTypes.size >= 3 && overlapCount > 0) {
     styleTags.push('COMBO')
   }
-  if (finalDelta >= 12 && finalDelta >= largestPriorDelta) {
+  if (
+    finalDelta >= 20 &&
+    finalDelta >= largestPriorDelta * 1.35
+  ) {
     styleTags.push('BIG_FINISH')
   }
-  if (adjacentPairBuildSteps >= 2) {
+  if (
+    preFinalAdjacentPairBuildSteps >= 2 &&
+    strongestInterimBlock >= 3
+  ) {
     styleTags.push('BLOCK_BUILD')
   }
   if (
-    puzzle.designSolution.length >= 4 &&
-    secondHalfImprovement >= firstHalfImprovement + 12
+    puzzle.designSolution.length >= 5 &&
+    firstHalfHasSetupStep &&
+    firstHalfImprovement <= 18 &&
+    secondHalfImprovement >= firstHalfImprovement + 25
   ) {
     styleTags.push('DEEP_SETUP')
   }
@@ -277,7 +306,14 @@ export function analyzePuzzleQuality(
   if (arraysEqual(puzzle.start, puzzle.target)) {
     rejectReasons.push('START_EQUALS_TARGET')
   }
-  if (puzzle.designSteps <= 1) {
+  const hasOneMoveClear = puzzle.hand.some((card) =>
+    arraysEqual(
+      applyCommand(puzzle.start, card.command),
+      puzzle.target,
+    ),
+  )
+
+  if (puzzle.designSteps <= 1 || hasOneMoveClear) {
     rejectReasons.push('SINGLE_MOVE_NON_TUTORIAL')
   }
   if (
@@ -315,3 +351,4 @@ export function analyzePuzzleQuality(
     uselessExtraCardIds,
   }
 }
+

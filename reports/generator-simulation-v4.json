@@ -1,0 +1,126 @@
+{
+  "simulationVersion": "v4",
+  "generatedAt": "2026-09-20T13:41:54.507Z",
+  "samplesPerDifficulty": 10000,
+  "seedStart": 1,
+  "totalRequested": 40000,
+  "totalGenerated": 40000,
+  "totalFailed": 0,
+  "allPassed": true,
+  "durationMs": 2259,
+  "difficultySummaries": [
+    {
+      "requestedDifficulty": "EASY",
+      "requestedCount": 10000,
+      "generatedCount": 10000,
+      "failedCount": 0,
+      "averageQuality": 80.57,
+      "minimumQuality": 64,
+      "maximumQuality": 89,
+      "averageGenerationAttempts": 1.39,
+      "maximumGenerationAttempts": 10,
+      "averageStartStructuralScore": 26.63,
+      "estimatedDifficultyCounts": {
+        "EASY": 8393,
+        "NORMAL": 1607,
+        "HARD": 0,
+        "VERY_HARD": 0
+      },
+      "styleTagCounts": {
+        "PROGRESSIVE": 6518,
+        "AMBIGUOUS": 2711,
+        "SACRIFICE": 3471,
+        "TRAP": 5895,
+        "COMBO": 3811,
+        "BIG_FINISH": 7271,
+        "BLOCK_BUILD": 2117,
+        "DEEP_SETUP": 0
+      }
+    },
+    {
+      "requestedDifficulty": "NORMAL",
+      "requestedCount": 10000,
+      "generatedCount": 10000,
+      "failedCount": 0,
+      "averageQuality": 81,
+      "minimumQuality": 63,
+      "maximumQuality": 94,
+      "averageGenerationAttempts": 1.21,
+      "maximumGenerationAttempts": 5,
+      "averageStartStructuralScore": 25.46,
+      "estimatedDifficultyCounts": {
+        "EASY": 0,
+        "NORMAL": 6116,
+        "HARD": 3884,
+        "VERY_HARD": 0
+      },
+      "styleTagCounts": {
+        "PROGRESSIVE": 4603,
+        "AMBIGUOUS": 4192,
+        "SACRIFICE": 5288,
+        "TRAP": 6412,
+        "COMBO": 6624,
+        "BIG_FINISH": 6844,
+        "BLOCK_BUILD": 5807,
+        "DEEP_SETUP": 0
+      }
+    },
+    {
+      "requestedDifficulty": "HARD",
+      "requestedCount": 10000,
+      "generatedCount": 10000,
+      "failedCount": 0,
+      "averageQuality": 80.16,
+      "minimumQuality": 65,
+      "maximumQuality": 94,
+      "averageGenerationAttempts": 1.23,
+      "maximumGenerationAttempts": 6,
+      "averageStartStructuralScore": 23.27,
+      "estimatedDifficultyCounts": {
+        "EASY": 0,
+        "NORMAL": 0,
+        "HARD": 5879,
+        "VERY_HARD": 4121
+      },
+      "styleTagCounts": {
+        "PROGRESSIVE": 3333,
+        "AMBIGUOUS": 3848,
+        "SACRIFICE": 6666,
+        "TRAP": 6342,
+        "COMBO": 8292,
+        "BIG_FINISH": 6098,
+        "BLOCK_BUILD": 8367,
+        "DEEP_SETUP": 3264
+      }
+    },
+    {
+      "requestedDifficulty": "VERY_HARD",
+      "requestedCount": 10000,
+      "generatedCount": 10000,
+      "failedCount": 0,
+      "averageQuality": 78.1,
+      "minimumQuality": 65,
+      "maximumQuality": 89,
+      "averageGenerationAttempts": 1.45,
+      "maximumGenerationAttempts": 8,
+      "averageStartStructuralScore": 21.15,
+      "estimatedDifficultyCounts": {
+        "EASY": 0,
+        "NORMAL": 0,
+        "HARD": 48,
+        "VERY_HARD": 9952
+      },
+      "styleTagCounts": {
+        "PROGRESSIVE": 1974,
+        "AMBIGUOUS": 2298,
+        "SACRIFICE": 8002,
+        "TRAP": 6205,
+        "COMBO": 9148,
+        "BIG_FINISH": 6182,
+        "BLOCK_BUILD": 9036,
+        "DEEP_SETUP": 5537
+      }
+    }
+  ],
+  "failures": []
+}

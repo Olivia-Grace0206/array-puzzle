@@ -67,4 +67,38 @@ describe('analyzePuzzleQuality', () => {
     expect(report.rejectReasons).toContain('START_EQUALS_TARGET')
     expect(report.rejectReasons).toContain('SINGLE_MOVE_NON_TUTORIAL')
   })
+
+  it('Design Solutionが複数手でも1枚でClearできる候補をRejectする', () => {
+    const puzzle: PuzzleDefinition = {
+      id: 'ONE-MOVE-ALTERNATIVE-TEST',
+      start: ['A', 'B', 'C', 'D'],
+      target: ['B', 'A', 'C', 'D'],
+      hand: [
+        {
+          id: 'design-1',
+          command: { type: 'REVERSE', l: 0, r: 2 },
+        },
+        {
+          id: 'design-2',
+          command: { type: 'MOVE', a: 0, b: 2 },
+        },
+        {
+          id: 'extra-one-move',
+          command: { type: 'SWAP', a: 0, b: 1 },
+        },
+      ],
+      designSolution: [
+        { type: 'REVERSE', l: 0, r: 2 },
+        { type: 'MOVE', a: 0, b: 2 },
+      ],
+      designSolutionCardIds: ['design-1', 'design-2'],
+      designSteps: 2,
+    }
+
+    const report = analyzePuzzleQuality(puzzle)
+
+    expect(report.accepted).toBe(false)
+    expect(report.rejectReasons).toContain('SINGLE_MOVE_NON_TUTORIAL')
+  })
 })
+
