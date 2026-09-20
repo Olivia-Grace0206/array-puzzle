@@ -1,4 +1,7 @@
 .command-card {
+  position: relative;
+
+  margin: 4px;
   padding: 12px 16px;
 
   border: 2px solid #333;
@@ -10,6 +13,67 @@
   font-weight: 700;
 
   cursor: pointer;
+}
+
+.command-card-use-check {
+  border-color: #b45309;
+  background: #fff7ed;
+}
+
+.command-card-next-move {
+  border-color: #15803d;
+  box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.2);
+}
+
+.command-card-order-hint {
+  position: absolute;
+  top: -11px;
+  right: -11px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 25px;
+  height: 25px;
+
+  border: 2px solid #1d4ed8;
+  border-radius: 50%;
+
+  color: #ffffff;
+  background: #2563eb;
+
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.command-card-assist-labels {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+
+  margin-top: 7px;
+}
+
+.command-card-assist-label {
+  padding: 2px 6px;
+
+  border-radius: 999px;
+
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.command-card-assist-label-unused {
+  color: #7c2d12;
+  background: #fed7aa;
+}
+
+.command-card-assist-label-next {
+  color: #14532d;
+  background: #bbf7d0;
 }
 
 .command-card:disabled {

@@ -2,8 +2,16 @@ import { useState } from 'react'
 import { CommandCard } from './components/CommandCard/CommandCard'
 import { Tile } from './components/Tile/Tile'
 import {
+  getNextMoveHint,
+  getUseCheckCards,
+} from './core/assist/assistHints'
+import {
   createAssistHistory,
+  getRecordedNextMoveCardId,
   getUsedAssistTypes,
+  hasAssistBeenUsed,
+  recordAssistUsage,
+  recordNextMoveHint,
 } from './core/assist/assistHistory'
 import { calculateStars } from './core/calculateStars'
 import { executeCard } from './core/executeCard'
@@ -32,7 +40,9 @@ function createInitialRuntimeState(
 }
 
 function App() {
-  const [puzzleIndex, setPuzzleIndex] = useState(0)
+  const [puzzleIndex, setPuzzleIndex] =
+    useState(0)
+
   const puzzle = fixedPuzzles[puzzleIndex]
 
   const [runtimeState, setRuntimeState] =
@@ -40,23 +50,24 @@ function App() {
       () => createInitialRuntimeState(puzzle),
     )
 
-  /**
-   * Assist履歴はRuntimeStateと分離する。
-   *
-   * Restartや問題切替では変更しないため、
-   * 同じ問題へ戻っても履歴を維持できる。
-   *
-   * Phase 3でAssistボタンと接続する。
-   */
-  const [assistHistory] = useState<AssistHistory>(
+  const [
+    assistHistory,
+    setAssistHistory,
+  ] = useState<AssistHistory>(
     () => createAssistHistory(),
   )
 
   const [hoveredCardId, setHoveredCardId] =
     useState<string | null>(null)
 
+  const [assistNotice, setAssistNotice] =
+    useState<string | null>(null)
+
   const displayArray = hoveredCardId
-    ? getPreviewArray(runtimeState, hoveredCardId)
+    ? getPreviewArray(
+        runtimeState,
+        hoveredCardId,
+      )
     : runtimeState.currentArray
 
   const cleared = isCleared(
@@ -68,6 +79,42 @@ function App() {
     assistHistory,
     puzzle.id,
   )
+
+  const useCheckUsed = hasAssistBeenUsed(
+    assistHistory,
+    puzzle.id,
+    'USE_CHECK',
+  )
+
+  const orderCheckUsed = hasAssistBeenUsed(
+    assistHistory,
+    puzzle.id,
+    'ORDER_CHECK',
+  )
+
+  const nextMoveUsed = hasAssistBeenUsed(
+    assistHistory,
+    puzzle.id,
+    'NEXT_MOVE',
+  )
+
+  const useCheckCards =
+    getUseCheckCards(puzzle)
+
+  const revealedUnusedCardIds = new Set(
+    useCheckUsed
+      ? useCheckCards.map((card) => card.id)
+      : [],
+  )
+
+  const orderHint =
+    puzzle.assistConfig?.orderHint
+
+  const nextMoveCardId =
+    getRecordedNextMoveCardId(
+      assistHistory,
+      puzzle.id,
+    )
 
   const stars = calculateStars(
     usedAssistTypes,
@@ -83,17 +130,16 @@ function App() {
     )
 
     setHoveredCardId(null)
+    setAssistNotice(null)
   }
 
   function handleRestart() {
-    /**
-     * RuntimeStateだけを初期化する。
-     * assistHistoryは変更しない。
-     */
     setRuntimeState(
       createInitialRuntimeState(puzzle),
     )
+
     setHoveredCardId(null)
+    setAssistNotice(null)
   }
 
   function handlePuzzleChange(
@@ -103,15 +149,13 @@ function App() {
       fixedPuzzles[nextPuzzleIndex]
 
     setPuzzleIndex(nextPuzzleIndex)
+
     setRuntimeState(
       createInitialRuntimeState(nextPuzzle),
     )
-    setHoveredCardId(null)
 
-    /**
-     * 問題を切り替えても
-     * assistHistoryは変更しない。
-     */
+    setHoveredCardId(null)
+    setAssistNotice(null)
   }
 
   function handleNextPuzzle() {
@@ -120,6 +164,94 @@ function App() {
     }
 
     handlePuzzleChange(puzzleIndex + 1)
+  }
+
+  function handleUseCheck() {
+    if (useCheckCards.length === 0) {
+      setAssistNotice(
+        'USE CHECK: この問題には使わないカードがありません。',
+      )
+
+      return
+    }
+
+    setAssistHistory((currentHistory) =>
+      recordAssistUsage(
+        currentHistory,
+        puzzle.id,
+        'USE_CHECK',
+      ),
+    )
+
+    setAssistNotice(
+      `USE CHECK: 使わないカードを${useCheckCards.length}枚表示しました。`,
+    )
+  }
+
+  function handleOrderCheck() {
+    if (!orderHint) {
+      setAssistNotice(
+        'ORDER CHECK: この問題にはORDER CHECK設定がありません。',
+      )
+
+      return
+    }
+
+    setAssistHistory((currentHistory) =>
+      recordAssistUsage(
+        currentHistory,
+        puzzle.id,
+        'ORDER_CHECK',
+      ),
+    )
+
+    setAssistNotice(
+      `ORDER CHECK: ${orderHint.step}番目に使うカードを表示しました。`,
+    )
+  }
+
+  function handleNextMove() {
+    if (nextMoveUsed) {
+      setAssistNotice(
+        'NEXT MOVE: すでに開示したカードを表示しています。',
+      )
+
+      return
+    }
+
+    const result = getNextMoveHint(
+      puzzle,
+      runtimeState.usedCards,
+    )
+
+    if (result.status === 'UNAVAILABLE') {
+      if (
+        result.reason ===
+        'OFF_DESIGN_PATH'
+      ) {
+        setAssistNotice(
+          'NEXT MOVE: Design Solutionの経路外にいるため回答できません。',
+        )
+      } else {
+        setAssistNotice(
+          'NEXT MOVE: Design Solutionはすでに完了しています。',
+        )
+      }
+
+      return
+    }
+
+    setAssistHistory((currentHistory) =>
+      recordNextMoveHint(
+        currentHistory,
+        puzzle.id,
+        result.cardId,
+      ),
+    )
+
+    setAssistNotice(
+      'NEXT MOVE: 次に使うカードを表示しました。',
+    )
   }
 
   return (
@@ -135,7 +267,9 @@ function App() {
               onClick={() =>
                 handlePuzzleChange(index)
               }
-              disabled={index === puzzleIndex}
+              disabled={
+                index === puzzleIndex
+              }
             >
               {puzzleOption.id}
             </button>
@@ -145,6 +279,55 @@ function App() {
 
       <section>
         <h2>{puzzle.id}</h2>
+
+        <div>
+          <strong>ASSIST</strong>
+
+          <div>
+            <button
+              type="button"
+              onClick={handleUseCheck}
+              disabled={
+                cleared ||
+                useCheckCards.length === 0
+              }
+            >
+              USE CHECK
+              {useCheckUsed ? ' ✓' : ''}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleOrderCheck}
+              disabled={
+                cleared || !orderHint
+              }
+            >
+              ORDER CHECK
+              {orderCheckUsed ? ' ✓' : ''}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleNextMove}
+              disabled={cleared}
+            >
+              NEXT MOVE
+              {nextMoveUsed ? ' ✓' : ''}
+            </button>
+          </div>
+
+          <div>
+            <small>
+              ASSISTS USED:{' '}
+              {usedAssistTypes.length}
+            </small>
+          </div>
+
+          {assistNotice && (
+            <p>{assistNotice}</p>
+          )}
+        </div>
 
         <div>
           <strong>CURRENT</strong>
@@ -157,14 +340,14 @@ function App() {
                   value={value}
                   index={index}
                   isMatched={
-                    value === puzzle.target[index]
+                    value ===
+                    puzzle.target[index]
                   }
                   isPreviewChanged={
                     hoveredCardId !== null &&
                     value !==
-                      runtimeState.currentArray[
-                        index
-                      ]
+                      runtimeState
+                        .currentArray[index]
                   }
                 />
               ),
@@ -194,7 +377,10 @@ function App() {
 
             <div>
               <strong>
-                STARS: {'★'.repeat(stars)}
+                STARS:{' '}
+                {stars > 0
+                  ? '★'.repeat(stars)
+                  : '0'}
               </strong>
             </div>
 
@@ -202,7 +388,9 @@ function App() {
               <div>
                 <button
                   type="button"
-                  onClick={handleNextPuzzle}
+                  onClick={
+                    handleNextPuzzle
+                  }
                 >
                   NEXT PUZZLE
                 </button>
@@ -213,7 +401,8 @@ function App() {
 
         <div>
           <strong>
-            MOVES: {runtimeState.moveCount}
+            MOVES:{' '}
+            {runtimeState.moveCount}
           </strong>
         </div>
 
@@ -237,18 +426,36 @@ function App() {
                     usedCard.id === card.id,
                 )
 
+              const orderHintStep =
+                orderCheckUsed &&
+                orderHint?.cardId === card.id
+                  ? orderHint.step
+                  : undefined
+
               return (
                 <CommandCard
                   key={card.id}
                   card={card}
                   disabled={isUsed}
+                  isExcludedByUseCheck={revealedUnusedCardIds.has(
+                    card.id,
+                  )}
+                  orderHintStep={
+                    orderHintStep
+                  }
+                  isNextMoveHint={
+                    nextMoveCardId ===
+                    card.id
+                  }
                   onHoverStart={
                     setHoveredCardId
                   }
                   onHoverEnd={() =>
                     setHoveredCardId(null)
                   }
-                  onExecute={handleExecute}
+                  onExecute={
+                    handleExecute
+                  }
                 />
               )
             })}

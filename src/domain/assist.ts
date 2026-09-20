@@ -7,12 +7,24 @@ export const ASSIST_TYPES = [
 export type AssistType =
   (typeof ASSIST_TYPES)[number]
 
+export type PuzzleAssistState = {
+  readonly usedAssistTypes: readonly AssistType[]
+
+  /**
+   * NEXT MOVEを使用した瞬間に開示したCard ID。
+   *
+   * 盤面が進んだ後も別のカードへ変化させず、
+   * 最初に開示した結果を維持する。
+   */
+  readonly nextMoveCardId?: string
+}
+
 /**
- * Puzzle IDごとに、使用済みAssist種類を保持する。
+ * Puzzle IDごとにAssistの使用状態を保持する。
  *
  * RuntimeStateとは分離しているため、
- * 盤面をRestartしてもAssist履歴は失われない。
+ * Restartや問題切替では失われない。
  */
 export type AssistHistory = Readonly<
-  Record<string, readonly AssistType[]>
+  Record<string, PuzzleAssistState>
 >
