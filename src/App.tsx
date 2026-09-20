@@ -21,6 +21,10 @@ import { calculateStars } from './core/calculateStars'
 import { executeCard } from './core/executeCard'
 import { getPreviewArray } from './core/getPreviewArray'
 import {
+  createRandomSeed,
+  generatePuzzle,
+} from './core/generator/generatePuzzle'
+import {
   ensurePuzzleHandOrder,
   getOrderedHand,
 } from './core/hand/handOrder'
@@ -84,7 +88,19 @@ function App() {
   const [puzzleIndex, setPuzzleIndex] =
     useState(0)
 
-  const puzzle = fixedPuzzles[puzzleIndex]
+  const [
+    generatedPuzzle,
+    setGeneratedPuzzle,
+  ] = useState<PuzzleDefinition | null>(
+    null,
+  )
+
+  const puzzle =
+    generatedPuzzle ??
+    fixedPuzzles[puzzleIndex]
+
+  const isGeneratedPuzzle =
+    generatedPuzzle !== null
 
   const [runtimeState, setRuntimeState] =
     useState<RuntimeState>(
@@ -211,6 +227,7 @@ function App() {
   )
 
   const hasNextPuzzle =
+    isGeneratedPuzzle ||
     puzzleIndex < fixedPuzzles.length - 1
 
   const selectedDifficulty =
@@ -258,7 +275,10 @@ function App() {
   ])
 
   useEffect(() => {
-    if (!cleared) {
+    if (
+      !cleared ||
+      isGeneratedPuzzle
+    ) {
       return
     }
 
@@ -272,6 +292,7 @@ function App() {
     )
   }, [
     cleared,
+    isGeneratedPuzzle,
     puzzle.id,
     stars,
   ])
@@ -361,6 +382,34 @@ function App() {
     }
 
     setPuzzleIndex(nextPuzzleIndex)
+    setGeneratedPuzzle(null)
+
+    setRuntimeState(
+      createInitialRuntimeState(nextPuzzle),
+    )
+
+    setAttemptOutcome('PLAYING')
+    setHoveredCardId(null)
+    setAssistNotice(null)
+    setSkipConfirmationOpen(false)
+    setScreen('PUZZLE')
+  }
+
+  function openGeneratedPuzzle() {
+    const nextPuzzle = generatePuzzle({
+      difficulty: 'NORMAL',
+      seed: createRandomSeed(),
+    })
+
+    setGeneratedPuzzle(nextPuzzle)
+
+    setHandOrderHistory(
+      (currentHistory) =>
+        ensurePuzzleHandOrder(
+          currentHistory,
+          nextPuzzle,
+        ),
+    )
 
     setRuntimeState(
       createInitialRuntimeState(nextPuzzle),
@@ -417,6 +466,12 @@ function App() {
   function handleBackToStages() {
     setSkipConfirmationOpen(false)
     setHoveredCardId(null)
+
+    if (isGeneratedPuzzle) {
+      setScreen('DIFFICULTY')
+      return
+    }
+
     setScreen('STAGE_SELECT')
   }
 
@@ -458,6 +513,11 @@ function App() {
   }
 
   function handleNextPuzzle() {
+    if (isGeneratedPuzzle) {
+      openGeneratedPuzzle()
+      return
+    }
+
     if (!hasNextPuzzle) {
       handleBackToStages()
       return
@@ -480,13 +540,15 @@ function App() {
   }
 
   function handleConfirmSkip() {
-    setProgressHistory(
-      (currentHistory) =>
-        recordPuzzleSkipped(
-          currentHistory,
-          puzzle.id,
-        ),
-    )
+    if (!isGeneratedPuzzle) {
+      setProgressHistory(
+        (currentHistory) =>
+          recordPuzzleSkipped(
+            currentHistory,
+            puzzle.id,
+          ),
+      )
+    }
 
     setAttemptOutcome('SKIPPED')
     setHoveredCardId(null)
@@ -630,7 +692,9 @@ function App() {
           className="header-nav-button"
           onClick={handleBackToStages}
         >
-          STAGE SELECT
+          {isGeneratedPuzzle
+            ? 'DIFFICULTY'
+            : 'STAGE SELECT'}
         </button>
 
         <button
@@ -788,17 +852,21 @@ function App() {
           <button
             type="button"
             className="difficulty-card difficulty-card-generated"
-            disabled
+            onClick={openGeneratedPuzzle}
           >
             <span className="difficulty-status">
-              COMING SOON
+              ENDLESS
             </span>
 
             <strong>AUTO GENERATE</strong>
 
             <span className="difficulty-description">
-              検証済みの問題を自動生成する
-              Endlessモード
+              解が保証された新しい問題を
+              自動生成してプレイします
+            </span>
+
+            <span className="difficulty-stage-count">
+              NORMAL PRESET
             </span>
           </button>
         </div>
@@ -1358,9 +1426,11 @@ function App() {
                 className="clear-dialog-button clear-dialog-button-next"
                 onClick={handleNextPuzzle}
               >
-                {hasNextPuzzle
-                  ? 'NEXT LEVEL'
-                  : 'STAGE SELECT'}
+                {isGeneratedPuzzle
+                  ? 'NEW PUZZLE'
+                  : hasNextPuzzle
+                    ? 'NEXT LEVEL'
+                    : 'STAGE SELECT'}
               </button>
             </div>
           </section>
@@ -1397,10 +1467,23 @@ function App() {
               id="skip-dialog-description"
               className="skip-dialog-description"
             >
-              この問題の獲得Starsは0になります。
-              <br />
-              次のStageは解放され、
-              あとから再挑戦できます。
+              {isGeneratedPuzzle ? (
+                <>
+                  この生成問題の獲得Starsは
+                  0になります。
+                  <br />
+                  Skip後は新しい問題を
+                  生成できます。
+                </>
+              ) : (
+                <>
+                  この問題の獲得Starsは
+                  0になります。
+                  <br />
+                  次のStageは解放され、
+                  あとから再挑戦できます。
+                </>
+              )}
             </p>
 
             <div className="skip-dialog-stars">

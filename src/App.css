@@ -2070,3 +2070,38 @@
     gap: 24px;
   }
 }
+
+/* ========================================
+   Phase 8
+   Generated Puzzle
+   ======================================== */
+
+.difficulty-card-generated:not(:disabled) {
+  border-color: #8295b8;
+
+  color: #344463;
+  background:
+    linear-gradient(
+      145deg,
+      #f7faff,
+      #e6edf8
+    );
+
+  cursor: pointer;
+}
+
+.difficulty-card-generated:not(:disabled)
+.difficulty-status {
+  color: #315b91;
+  background: #d8e7fa;
+}
+
+.difficulty-card-generated:not(:disabled):hover {
+  border-color: #426697;
+
+  box-shadow:
+    0 15px 32px
+    rgba(48, 75, 113, 0.18);
+
+  transform: translateY(-3px);
+}
