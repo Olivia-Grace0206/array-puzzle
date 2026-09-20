@@ -1,14 +1,26 @@
 .tile-wrapper {
   display: inline-flex;
+  flex: 0 0 auto;
   flex-direction: column;
   align-items: center;
-  margin: 7px;
+
+  margin: clamp(6px, 0.9vw, 9px);
 }
 
 .tile-index {
-  margin-bottom: 4px;
-  font-size: 14px;
-  color: #666;
+  margin-bottom: 5px;
+
+  color: #687083;
+
+  font-family:
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    monospace;
+
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .tile {
@@ -19,14 +31,19 @@
   align-items: center;
   justify-content: center;
 
-  width: 48px;
-  height: 48px;
+  width: clamp(50px, 5.2vw, 62px);
+  height: clamp(50px, 5.2vw, 62px);
 
   border: 2px solid #333;
-  border-radius: 8px;
+  border-radius: 10px;
 
-  font-size: 24px;
-  font-weight: 700;
+  color: #20242c;
+
+  box-shadow:
+    0 5px 11px rgba(30, 37, 51, 0.13);
+
+  font-size: clamp(23px, 2.4vw, 29px);
+  font-weight: 850;
 }
 
 /* TARGETとの正位置一致：外側の実線枠 */
@@ -55,4 +72,17 @@
   border-radius: 10px;
 
   pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .tile-wrapper {
+    margin: 6px;
+  }
+
+  .tile {
+    width: 46px;
+    height: 46px;
+
+    font-size: 22px;
+  }
 }

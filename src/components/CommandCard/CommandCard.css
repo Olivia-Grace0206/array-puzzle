@@ -1,69 +1,138 @@
 .command-card {
+  --card-accent: #68758c;
+
   position: relative;
 
-  margin: 4px;
-  padding: 12px 16px;
+  display: flex;
+  flex: 0 0 154px;
+  flex-direction: column;
+  align-items: center;
 
-  border: 2px solid #333;
-  border-radius: 10px;
+  width: 154px;
+  min-height: 116px;
+  padding: 17px 12px 11px;
 
-  background: #ffffff;
+  overflow: visible;
 
-  font-size: 16px;
-  font-weight: 700;
+  border: 2px solid #cdd3de;
+  border-radius: 14px;
+
+  color: #252c3a;
+  background:
+    linear-gradient(
+      155deg,
+      #ffffff 0%,
+      #f4f6fa 100%
+    );
+
+  box-shadow:
+    0 7px 14px rgba(13, 22, 39, 0.15);
+
+  scroll-snap-align: center;
 
   cursor: pointer;
+
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    border-color 140ms ease;
 }
 
-.command-card-use-check {
-  border-color: #b45309;
-  background: #fff7ed;
-}
-
-.command-card-next-move {
-  border-color: #15803d;
-  box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.2);
-}
-
-.command-card-order-hint {
+.command-card-accent {
   position: absolute;
-  top: -11px;
-  right: -11px;
+  top: 0;
+  left: 14px;
+  right: 14px;
 
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  height: 5px;
 
-  width: 25px;
-  height: 25px;
+  border-radius: 0 0 5px 5px;
 
-  border: 2px solid #1d4ed8;
-  border-radius: 50%;
-
-  color: #ffffff;
-  background: #2563eb;
-
-  font-size: 14px;
-  font-weight: 800;
-  line-height: 1;
+  background: var(--card-accent);
 }
 
-.command-card-assist-labels {
+.command-card-swap {
+  --card-accent: #c95b64;
+}
+
+.command-card-reverse {
+  --card-accent: #7b62c5;
+}
+
+.command-card-rotate {
+  --card-accent: #3e8cad;
+}
+
+.command-card-move {
+  --card-accent: #4d9469;
+}
+
+.command-card:hover:not(:disabled) {
+  z-index: 2;
+
+  border-color: var(--card-accent);
+
+  box-shadow:
+    0 14px 24px rgba(12, 21, 37, 0.22);
+
+  transform: translateY(-7px);
+}
+
+.command-card-kicker {
+  margin-bottom: 5px;
+
+  color: #969dab;
+
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.15em;
+}
+
+.command-card-type {
+  color: #222938;
+
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 0.035em;
+  line-height: 1.1;
+}
+
+.command-card-parameters {
+  margin-top: 5px;
+
+  color: #50596b;
+
+  font-family:
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    monospace;
+
+  font-size: 15px;
+  font-weight: 750;
+}
+
+.command-card-assist-area {
   display: flex;
+  align-items: center;
   justify-content: center;
   gap: 5px;
 
-  margin-top: 7px;
+  min-height: 21px;
+  margin-top: auto;
+  padding-top: 8px;
 }
 
 .command-card-assist-label {
-  padding: 2px 6px;
+  padding: 3px 7px;
 
   border-radius: 999px;
 
-  font-size: 11px;
-  font-weight: 800;
-  line-height: 1.4;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  line-height: 1.3;
 }
 
 .command-card-assist-label-unused {
@@ -76,8 +145,83 @@
   background: #bbf7d0;
 }
 
+.command-card-use-check {
+  border-color: #d17a42;
+  background:
+    linear-gradient(
+      155deg,
+      #fffaf4,
+      #ffeddc
+    );
+}
+
+.command-card-next-move {
+  border-color: #30905a;
+
+  box-shadow:
+    0 0 0 4px rgba(48, 144, 90, 0.2),
+    0 9px 20px rgba(12, 21, 37, 0.18);
+}
+
+.command-card-order-hint {
+  position: absolute;
+  z-index: 3;
+  top: -12px;
+  right: -12px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 29px;
+  height: 29px;
+
+  border: 3px solid #ffffff;
+  border-radius: 50%;
+
+  color: #ffffff;
+  background: #2f62bd;
+
+  box-shadow:
+    0 3px 8px rgba(32, 57, 105, 0.3);
+
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1;
+}
+
 .command-card:disabled {
-  opacity: 0.45;
-  background: #eeeeee;
+  border-color: #aeb5c2;
+
+  color: #747b88;
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      #e1e4e9,
+      #e1e4e9 7px,
+      #d9dde3 7px,
+      #d9dde3 14px
+    );
+
+  box-shadow: none;
+
+  opacity: 0.52;
   cursor: not-allowed;
+}
+
+.command-card:disabled .command-card-accent {
+  background: #8d95a3;
+}
+
+.command-card:disabled:hover {
+  transform: none;
+}
+
+@media (max-width: 640px) {
+  .command-card {
+    flex-basis: 142px;
+
+    width: 142px;
+    min-height: 108px;
+  }
 }

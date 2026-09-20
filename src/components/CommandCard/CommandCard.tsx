@@ -12,21 +12,23 @@ type CommandCardProps = {
   onExecute?: (cardId: string) => void
 }
 
-function formatCommand(card: CommandCardData) {
+function formatParameters(
+  card: CommandCardData,
+): string {
   const command = card.command
 
   switch (command.type) {
     case 'SWAP':
-      return `SWAP(${command.a}, ${command.b})`
+      return `(${command.a}, ${command.b})`
 
     case 'REVERSE':
-      return `REVERSE(${command.l}, ${command.r})`
+      return `(${command.l}, ${command.r})`
 
     case 'ROTATE':
-      return `ROTATE(${command.l}, ${command.r}, ${command.k})`
+      return `(${command.l}, ${command.r}, ${command.k})`
 
     case 'MOVE':
-      return `MOVE(${command.a}, ${command.b})`
+      return `(${command.a}, ${command.b})`
   }
 }
 
@@ -40,8 +42,12 @@ export function CommandCard({
   onHoverEnd,
   onExecute,
 }: CommandCardProps) {
+  const commandType =
+    card.command.type.toLowerCase()
+
   const className = [
     'command-card',
+    `command-card-${commandType}`,
     isExcludedByUseCheck
       ? 'command-card-use-check'
       : '',
@@ -52,41 +58,54 @@ export function CommandCard({
     .filter(Boolean)
     .join(' ')
 
+  const accessibleName =
+    `${card.command.type}${formatParameters(card)}`
+
   return (
     <button
       type="button"
       className={className}
       disabled={disabled}
+      aria-label={accessibleName}
       onMouseEnter={() =>
         onHoverStart?.(card.id)
       }
       onMouseLeave={() => onHoverEnd?.()}
       onClick={() => onExecute?.(card.id)}
     >
+      <span className="command-card-accent" />
+
       {orderHintStep !== undefined && (
         <span className="command-card-order-hint">
           {orderHintStep}
         </span>
       )}
 
-      <span>{formatCommand(card)}</span>
+      <span className="command-card-kicker">
+        COMMAND
+      </span>
 
-      {(isExcludedByUseCheck ||
-        isNextMoveHint) && (
-        <span className="command-card-assist-labels">
-          {isExcludedByUseCheck && (
-            <span className="command-card-assist-label command-card-assist-label-unused">
-              NOT USED
-            </span>
-          )}
+      <span className="command-card-type">
+        {card.command.type}
+      </span>
 
-          {isNextMoveHint && (
-            <span className="command-card-assist-label command-card-assist-label-next">
-              NEXT
-            </span>
-          )}
-        </span>
-      )}
+      <span className="command-card-parameters">
+        {formatParameters(card)}
+      </span>
+
+      <span className="command-card-assist-area">
+        {isExcludedByUseCheck && (
+          <span className="command-card-assist-label command-card-assist-label-unused">
+            NOT USED
+          </span>
+        )}
+
+        {isNextMoveHint && (
+          <span className="command-card-assist-label command-card-assist-label-next">
+            NEXT
+          </span>
+        )}
+      </span>
     </button>
   )
 }

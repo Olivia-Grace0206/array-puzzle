@@ -2,6 +2,7 @@ import {
   useEffect,
   useState,
 } from 'react'
+import './App.css'
 import { CommandCard } from './components/CommandCard/CommandCard'
 import { Tile } from './components/Tile/Tile'
 import {
@@ -386,218 +387,370 @@ function App() {
   }
 
   return (
-    <main>
-      <h1>Array Puzzle</h1>
+    <main className="app-shell">
+      <header className="app-header">
+        <div className="app-brand">
+          <p className="app-eyebrow">
+            COMMAND ORDER PUZZLE
+          </p>
 
-      <div>
-        {fixedPuzzles.map(
-          (puzzleOption, index) => {
-            const progress =
-              getPuzzleProgress(
-                progressHistory,
-                puzzleOption.id,
+          <h1>Array Puzzle</h1>
+        </div>
+
+        <nav
+          className="stage-strip"
+          aria-label="Development stage selector"
+        >
+          {fixedPuzzles.map(
+            (puzzleOption, index) => {
+              const progress =
+                getPuzzleProgress(
+                  progressHistory,
+                  puzzleOption.id,
+                )
+
+              const unlocked =
+                isPuzzleUnlocked(
+                  fixedPuzzles,
+                  index,
+                  progressHistory,
+                )
+
+              let buttonLabel =
+                puzzleOption.id
+
+              if (!unlocked) {
+                buttonLabel =
+                  `LOCKED ${puzzleOption.id}`
+              } else if (
+                progress.status === 'CLEARED'
+              ) {
+                buttonLabel =
+                  `${puzzleOption.id} ★${progress.bestStars ?? 0}`
+              } else if (
+                progress.status === 'SKIPPED'
+              ) {
+                buttonLabel =
+                  `${puzzleOption.id} SKIPPED`
+              }
+
+              const className = [
+                'stage-button',
+                index === puzzleIndex
+                  ? 'stage-button-active'
+                  : '',
+                !unlocked
+                  ? 'stage-button-locked'
+                  : '',
+              ]
+                .filter(Boolean)
+                .join(' ')
+
+              return (
+                <button
+                  key={puzzleOption.id}
+                  type="button"
+                  className={className}
+                  onClick={() =>
+                    handlePuzzleSelect(index)
+                  }
+                  disabled={
+                    index === puzzleIndex ||
+                    !unlocked
+                  }
+                >
+                  {buttonLabel}
+                </button>
               )
+            },
+          )}
+        </nav>
+      </header>
 
-            const unlocked =
-              isPuzzleUnlocked(
-                fixedPuzzles,
-                index,
-                progressHistory,
-              )
-
-            let buttonLabel =
-              puzzleOption.id
-
-            if (!unlocked) {
-              buttonLabel =
-                `LOCKED ${puzzleOption.id}`
-            } else if (
-              progress.status === 'CLEARED'
-            ) {
-              buttonLabel =
-                `${puzzleOption.id} ★${progress.bestStars ?? 0}`
-            } else if (
-              progress.status === 'SKIPPED'
-            ) {
-              buttonLabel =
-                `${puzzleOption.id} SKIPPED`
-            }
-
-            return (
-              <button
-                key={puzzleOption.id}
-                type="button"
-                onClick={() =>
-                  handlePuzzleSelect(index)
-                }
-                disabled={
-                  index === puzzleIndex ||
-                  !unlocked
-                }
-              >
-                {buttonLabel}
-              </button>
-            )
-          },
-        )}
-      </div>
-
-      <section>
-        <h2>{puzzle.id}</h2>
-
-        <div>
-          <strong>ASSIST</strong>
-
+      <section className="puzzle-screen">
+        <div className="puzzle-heading">
           <div>
+            <p className="section-eyebrow">
+              CURRENT STAGE
+            </p>
+
+            <h2>{puzzle.id}</h2>
+          </div>
+
+          <div className="puzzle-stats">
+            <div className="stat-item">
+              <span className="stat-label">
+                MOVES
+              </span>
+
+              <strong>
+                {runtimeState.moveCount}
+              </strong>
+            </div>
+
+            <div className="stat-item">
+              <span className="stat-label">
+                ASSISTS
+              </span>
+
+              <strong>
+                {usedAssistTypes.length}
+              </strong>
+            </div>
+          </div>
+        </div>
+
+        <section
+          className="assist-panel"
+          aria-labelledby="assist-title"
+        >
+          <div className="panel-heading">
+            <div>
+              <p className="section-eyebrow">
+                HELP CARDS
+              </p>
+
+              <h3 id="assist-title">
+                ASSIST
+              </h3>
+            </div>
+
+            <span className="assist-cost">
+              1 Assist = −1 Star
+            </span>
+          </div>
+
+          <div className="assist-buttons">
             <button
               type="button"
+              className={[
+                'assist-button',
+                useCheckUsed
+                  ? 'assist-button-used'
+                  : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
               onClick={handleUseCheck}
               disabled={
                 attemptFinished ||
                 useCheckCards.length === 0
               }
             >
-              USE CHECK
-              {useCheckUsed ? ' ✓' : ''}
+              <span className="assist-button-name">
+                USE CHECK
+              </span>
+
+              <span className="assist-button-description">
+                使わないカードを表示
+              </span>
+
+              {useCheckUsed && (
+                <span className="assist-used-mark">
+                  USED
+                </span>
+              )}
             </button>
 
             <button
               type="button"
+              className={[
+                'assist-button',
+                orderCheckUsed
+                  ? 'assist-button-used'
+                  : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
               onClick={handleOrderCheck}
               disabled={
                 attemptFinished ||
                 !orderHint
               }
             >
-              ORDER CHECK
-              {orderCheckUsed ? ' ✓' : ''}
+              <span className="assist-button-name">
+                ORDER CHECK
+              </span>
+
+              <span className="assist-button-description">
+                使用順を1枚表示
+              </span>
+
+              {orderCheckUsed && (
+                <span className="assist-used-mark">
+                  USED
+                </span>
+              )}
             </button>
 
             <button
               type="button"
+              className={[
+                'assist-button',
+                nextMoveUsed
+                  ? 'assist-button-used'
+                  : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
               onClick={handleNextMove}
               disabled={attemptFinished}
             >
-              NEXT MOVE
-              {nextMoveUsed ? ' ✓' : ''}
+              <span className="assist-button-name">
+                NEXT MOVE
+              </span>
+
+              <span className="assist-button-description">
+                次の正解カードを表示
+              </span>
+
+              {nextMoveUsed && (
+                <span className="assist-used-mark">
+                  USED
+                </span>
+              )}
             </button>
           </div>
 
-          <div>
-            <small>
-              ASSISTS USED:{' '}
-              {usedAssistTypes.length}
-            </small>
+          <p
+            className={[
+              'assist-notice',
+              assistNotice
+                ? ''
+                : 'assist-notice-idle',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+          >
+            {assistNotice ??
+              'Assistを選ぶと、この問題のStarsが減少します。'}
+          </p>
+        </section>
+
+        <section className="board-panel">
+          <div className="board-row">
+            <div className="board-label">
+              <span className="board-label-main">
+                CURRENT
+              </span>
+
+              <span className="board-label-sub">
+                現在の配列
+              </span>
+            </div>
+
+            <div className="tile-row">
+              {displayArray.map(
+                (value, index) => (
+                  <Tile
+                    key={`current-${index}`}
+                    value={value}
+                    index={index}
+                    isMatched={
+                      value ===
+                      puzzle.target[index]
+                    }
+                    isPreviewChanged={
+                      hoveredCardId !== null &&
+                      value !==
+                        runtimeState
+                          .currentArray[index]
+                    }
+                  />
+                ),
+              )}
+            </div>
           </div>
 
-          {assistNotice && (
-            <p>{assistNotice}</p>
-          )}
-        </div>
+          <div className="board-divider" />
 
-        <div>
-          <strong>CURRENT</strong>
+          <div className="board-row">
+            <div className="board-label">
+              <span className="board-label-main">
+                TARGET
+              </span>
 
-          <div>
-            {displayArray.map(
-              (value, index) => (
-                <Tile
-                  key={`current-${index}`}
-                  value={value}
-                  index={index}
-                  isMatched={
-                    value ===
-                    puzzle.target[index]
-                  }
-                  isPreviewChanged={
-                    hoveredCardId !== null &&
-                    value !==
-                      runtimeState
-                        .currentArray[index]
-                  }
-                />
-              ),
-            )}
+              <span className="board-label-sub">
+                目標の配列
+              </span>
+            </div>
+
+            <div className="tile-row">
+              {puzzle.target.map(
+                (value, index) => (
+                  <Tile
+                    key={`target-${index}`}
+                    value={value}
+                    index={index}
+                  />
+                ),
+              )}
+            </div>
           </div>
-        </div>
-
-        <div>
-          <strong>TARGET</strong>
-
-          <div>
-            {puzzle.target.map(
-              (value, index) => (
-                <Tile
-                  key={`target-${index}`}
-                  value={value}
-                  index={index}
-                />
-              ),
-            )}
-          </div>
-        </div>
+        </section>
 
         {cleared && (
-          <div>
-            <strong>CLEAR!</strong>
-
+          <section className="result-panel result-panel-clear">
             <div>
-              <strong>
-                STARS:{' '}
-                {stars > 0
-                  ? '★'.repeat(stars)
-                  : '0'}
+              <p className="result-kicker">
+                PUZZLE COMPLETE
+              </p>
+
+              <strong className="result-title">
+                CLEAR!
               </strong>
             </div>
 
-            {hasNextPuzzle && (
-              <div>
-                <button
-                  type="button"
-                  onClick={
-                    handleNextPuzzle
-                  }
-                >
-                  NEXT PUZZLE
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {skipped && (
-          <div>
-            <strong>SKIPPED</strong>
-
-            <div>
-              <strong>STARS: 0</strong>
+            <div className="result-stars">
+              {stars > 0
+                ? '★'.repeat(stars)
+                : '0 Stars'}
             </div>
 
             {hasNextPuzzle && (
-              <div>
-                <button
-                  type="button"
-                  onClick={
-                    handleNextPuzzle
-                  }
-                >
-                  NEXT PUZZLE
-                </button>
-              </div>
+              <button
+                type="button"
+                className="result-button"
+                onClick={handleNextPuzzle}
+              >
+                NEXT PUZZLE
+              </button>
             )}
-          </div>
+          </section>
         )}
 
-        <div>
-          <strong>
-            MOVES:{' '}
-            {runtimeState.moveCount}
-          </strong>
-        </div>
+        {skipped && (
+          <section className="result-panel result-panel-skipped">
+            <div>
+              <p className="result-kicker">
+                STAGE SKIPPED
+              </p>
 
-        <div>
+              <strong className="result-title">
+                SKIPPED
+              </strong>
+            </div>
+
+            <div className="result-stars">
+              0 Stars
+            </div>
+
+            {hasNextPuzzle && (
+              <button
+                type="button"
+                className="result-button"
+                onClick={handleNextPuzzle}
+              >
+                NEXT PUZZLE
+              </button>
+            )}
+          </section>
+        )}
+
+        <div className="play-actions">
           <button
             type="button"
+            className="action-button"
             onClick={handleRestart}
           >
             RESTART
@@ -605,6 +758,7 @@ function App() {
 
           <button
             type="button"
+            className="action-button action-button-skip"
             onClick={handleSkip}
             disabled={attemptFinished}
           >
@@ -612,10 +766,34 @@ function App() {
           </button>
         </div>
 
-        <div>
-          <strong>HAND</strong>
+        <section
+          className="hand-panel"
+          aria-labelledby="hand-title"
+        >
+          <div className="hand-heading">
+            <div>
+              <p className="section-eyebrow section-eyebrow-light">
+                CHOOSE A COMMAND
+              </p>
 
-          <div>
+              <h3 id="hand-title">
+                HAND
+              </h3>
+            </div>
+
+            <div className="hand-count">
+              <strong>
+                {
+                  runtimeState
+                    .remainingCards.length
+                }
+              </strong>
+
+              <span>cards remaining</span>
+            </div>
+          </div>
+
+          <div className="hand-cards">
             {displayedHand.map((card) => {
               const isUsed =
                 runtimeState.usedCards.some(
@@ -660,7 +838,7 @@ function App() {
               )
             })}
           </div>
-        </div>
+        </section>
       </section>
     </main>
   )
