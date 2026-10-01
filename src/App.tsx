@@ -4,6 +4,12 @@ import {
   useState,
 } from 'react'
 import './App.css'
+import {
+  getActiveCommandPreview,
+  getCommandActivation,
+  type CommandInput,
+  type CommandPreview,
+} from './app/commandInteraction'
 import { CommandCard } from './components/CommandCard/CommandCard'
 import { Tile } from './components/Tile/Tile'
 import {
@@ -164,8 +170,8 @@ function App() {
     setAttemptOutcome,
   ] = useState<AttemptOutcome>('PLAYING')
 
-  const [hoveredCardId, setHoveredCardId] =
-    useState<string | null>(null)
+  const [commandPreview, setCommandPreview] =
+    useState<CommandPreview | null>(null)
 
   const [assistNotice, setAssistNotice] =
     useState<string | null>(null)
@@ -180,13 +186,6 @@ function App() {
 
   const skipDialogRef =
     useRef<HTMLElement | null>(null)
-
-  const displayArray = hoveredCardId
-    ? getPreviewArray(
-        runtimeState,
-        hoveredCardId,
-      )
-    : runtimeState.currentArray
 
   const cleared = isCleared(
     runtimeState.currentArray,
@@ -205,6 +204,17 @@ function App() {
   const blockingModalOpen =
     showClearDialog ||
     skipConfirmationOpen
+
+  const activePreview = getActiveCommandPreview(
+    commandPreview,
+    puzzle,
+    runtimeState,
+    screen === 'PUZZLE' && !attemptFinished && !blockingModalOpen,
+  )
+  const previewCardId = activePreview?.cardId ?? null
+  const displayArray = previewCardId
+    ? getPreviewArray(runtimeState, previewCardId)
+    : runtimeState.currentArray
 
   const usedAssistTypes = getUsedAssistTypes(
     assistHistory,
@@ -423,7 +433,7 @@ function App() {
     )
 
     setAttemptOutcome('PLAYING')
-    setHoveredCardId(null)
+    setCommandPreview(null)
     setAssistNotice(null)
     setSkipConfirmationOpen(false)
     setScreen('PUZZLE')
@@ -457,7 +467,7 @@ function App() {
     )
 
     setAttemptOutcome('PLAYING')
-    setHoveredCardId(null)
+    setCommandPreview(null)
     setAssistNotice(null)
     setSkipConfirmationOpen(false)
     setScreen('PUZZLE')
@@ -478,6 +488,7 @@ function App() {
       difficultyId,
     )
 
+    setCommandPreview(null)
     setScreen('STAGE_SELECT')
   }
 
@@ -506,7 +517,7 @@ function App() {
 
   function handleBackToStages() {
     setSkipConfirmationOpen(false)
-    setHoveredCardId(null)
+    setCommandPreview(null)
 
     if (isGeneratedPuzzle) {
       setScreen('GENERATOR_DIFFICULTY')
@@ -517,13 +528,36 @@ function App() {
   }
 
   function handleBackToDifficulty() {
+    setCommandPreview(null)
     setSkipConfirmationOpen(false)
     setScreen('DIFFICULTY')
   }
 
   function handleBackToMain() {
+    setCommandPreview(null)
     setSkipConfirmationOpen(false)
     setScreen('MAIN')
+  }
+
+  function handleHoverStart(cardId: string) {
+    if (attemptFinished || blockingModalOpen) return
+    setCommandPreview({ cardId, input: 'mouse', puzzle, runtime: runtimeState })
+  }
+
+  function handleHoverEnd() {
+    setCommandPreview((current) => current?.input === 'mouse' ? null : current)
+  }
+
+  function handleCardActivate(cardId: string, input: CommandInput) {
+    const action = getCommandActivation(
+      commandPreview, puzzle, runtimeState, cardId, input,
+      screen === 'PUZZLE' && !attemptFinished && !blockingModalOpen,
+    )
+    if (action === 'EXECUTE') {
+      handleExecute(cardId)
+    } else if (action === 'PREVIEW') {
+      setCommandPreview({ cardId, input, puzzle, runtime: runtimeState })
+    }
   }
 
   function handleExecute(cardId: string) {
@@ -538,7 +572,7 @@ function App() {
       executeCard(currentState, cardId),
     )
 
-    setHoveredCardId(null)
+    setCommandPreview(null)
     setAssistNotice(null)
   }
 
@@ -548,7 +582,7 @@ function App() {
     )
 
     setAttemptOutcome('PLAYING')
-    setHoveredCardId(null)
+    setCommandPreview(null)
     setAssistNotice(null)
     setSkipConfirmationOpen(false)
   }
@@ -574,7 +608,7 @@ function App() {
       return
     }
 
-    setHoveredCardId(null)
+    setCommandPreview(null)
     setSkipConfirmationOpen(true)
   }
 
@@ -594,7 +628,7 @@ function App() {
     }
 
     setAttemptOutcome('SKIPPED')
-    setHoveredCardId(null)
+    setCommandPreview(null)
     setAssistNotice(null)
     setSkipConfirmationOpen(false)
   }
@@ -1358,7 +1392,7 @@ function App() {
                       puzzle.target[index]
                     }
                     isPreviewChanged={
-                      hoveredCardId !== null &&
+                      previewCardId !== null &&
                       value !==
                         runtimeState
                           .currentArray[index]
@@ -1470,6 +1504,10 @@ function App() {
             </div>
           </div>
 
+          <p className="touch-command-help">
+            1回タップでPreview。同じカードをもう1回タップで実行。
+          </p>
+
           <div className="hand-cards">
             {displayedHand.map((card) => {
               const isUsed =
@@ -1502,15 +1540,12 @@ function App() {
                     nextMoveCardId ===
                     card.id
                   }
-                  onHoverStart={
-                    setHoveredCardId
+                  isTouchPreview={
+                    activePreview?.input === 'touch' && previewCardId === card.id
                   }
-                  onHoverEnd={() =>
-                    setHoveredCardId(null)
-                  }
-                  onExecute={
-                    handleExecute
-                  }
+                  onHoverStart={handleHoverStart}
+                  onHoverEnd={handleHoverEnd}
+                  onActivate={handleCardActivate}
                 />
               )
             })}

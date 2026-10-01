@@ -86,3 +86,20 @@
     font-size: 22px;
   }
 }
+
+@media (max-width: 700px), (hover: none) and (pointer: coarse) {
+  .board-panel .tile-wrapper {
+    margin: 7px;
+  }
+
+  .board-panel .tile-index {
+    margin-bottom: 5px;
+    font-size: 12px;
+  }
+
+  .board-panel .tile {
+    width: 40px;
+    height: 40px;
+    font-size: 22px;
+  }
+}
