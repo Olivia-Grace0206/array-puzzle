@@ -3,6 +3,7 @@ import {
   getActiveCommandPreview,
   getCommandActivation,
   hasPointerMoved,
+  resolveCommandClickInput,
   resolveCommandInput,
   type CommandPreview,
 } from '../src/app/commandInteraction'
@@ -28,6 +29,37 @@ function touchPreview(runtime: RuntimeState, cardId = cardA.id): CommandPreview 
 }
 
 describe('command input', () => {
+  it.each([0, 1])('keeps touch clicks with detail=%i on the two-stage path', (detail) => {
+    const runtime = createAttempt()
+    const input = resolveCommandClickInput(
+      { detail }, 'touch',
+      { canHover: true, coarsePointer: false, hasTouch: true },
+    )
+    expect(input).toBe('touch')
+    expect(getCommandActivation(null, puzzle, runtime, cardA.id, input, true)).toBe('PREVIEW')
+    expect(getCommandActivation(touchPreview(runtime), puzzle, runtime, cardA.id, input, true)).toBe('EXECUTE')
+  })
+
+  it('prefers a recorded touch gesture over a compatibility mouse click', () => {
+    expect(resolveCommandClickInput(
+      { detail: 0, pointerType: 'mouse' }, 'touch',
+      { canHover: true, coarsePointer: false, hasTouch: true },
+    )).toBe('touch')
+  })
+
+  it('uses touch capabilities for a zero-detail click with no pointer information', () => {
+    expect(resolveCommandClickInput(
+      { detail: 0 }, undefined,
+      { canHover: false, coarsePointer: true, hasTouch: true },
+    )).toBe('touch')
+  })
+
+  it('keeps desktop mouse and keyboard activation immediate', () => {
+    const capabilities = { canHover: true, coarsePointer: false, hasTouch: false }
+    expect(resolveCommandClickInput({ detail: 1 }, 'mouse', capabilities)).toBe('mouse')
+    expect(resolveCommandClickInput({ detail: 0 }, undefined, capabilities)).toBe('mouse')
+  })
+
   it('uses actual mouse input even on touch-capable or narrow devices', () => {
     expect(resolveCommandInput('mouse', false, true, true)).toBe('mouse')
   })

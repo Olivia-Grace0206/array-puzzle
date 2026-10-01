@@ -34,6 +34,21 @@ export function resolveCommandInput(
   return coarsePointer || (!canHover && hasTouch) ? 'touch' : 'mouse'
 }
 
+export function resolveCommandClickInput(
+  click: { detail: number; pointerType?: string },
+  gesturePointerType: string | undefined,
+  capabilities: { canHover: boolean; coarsePointer: boolean; hasTouch: boolean },
+): CommandInput {
+  // A zero click count is not proof of mouse/keyboard input. Prefer the actual
+  // pointer-down source, including touch clicks reported as compatibility mouse events.
+  return resolveCommandInput(
+    gesturePointerType || click.pointerType || '',
+    capabilities.canHover,
+    capabilities.coarsePointer,
+    capabilities.hasTouch,
+  )
+}
+
 export function getActiveCommandPreview(
   preview: CommandPreview | null,
   puzzle: PuzzleDefinition,
