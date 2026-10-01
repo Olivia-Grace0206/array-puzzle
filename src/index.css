@@ -68,3 +68,21 @@ button:focus-visible {
 
   overflow: hidden;
 }
+
+/* Narrow viewports and primary touch devices may scroll vertically. */
+@media (max-width: 700px), (hover: none) and (pointer: coarse) {
+  html {
+    min-width: 0;
+    height: auto;
+    min-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  body,
+  #root {
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+}

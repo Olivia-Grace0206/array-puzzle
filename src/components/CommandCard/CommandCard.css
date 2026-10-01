@@ -31,6 +31,7 @@
   scroll-snap-align: center;
 
   cursor: pointer;
+  touch-action: manipulation;
 
   transition:
     transform 140ms ease,
@@ -223,5 +224,25 @@
 
     width: 142px;
     min-height: 108px;
+  }
+}
+
+.command-card.command-card-touch-preview:not(:disabled) {
+  z-index: 2;
+  border-color: var(--card-accent);
+  box-shadow:
+    0 0 0 3px rgba(255, 255, 255, 0.8),
+    0 10px 20px rgba(12, 21, 37, 0.22);
+}
+
+@media (hover: none) and (pointer: coarse) {
+  /* Touch browsers may retain :hover after a tap. Selection is explicit. */
+  .command-card:hover:not(:disabled) {
+    transform: none;
+  }
+
+  .command-card:hover:not(:disabled):not(.command-card-touch-preview) {
+    border-color: var(--card-accent);
+    box-shadow: 0 7px 14px rgba(13, 22, 39, 0.15);
   }
 }
