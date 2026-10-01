@@ -2327,7 +2327,7 @@
 
   .puzzle-screen {
     flex: none;
-    gap: 14px;
+    gap: 10px;
   }
 
   .puzzle-heading {
@@ -2405,7 +2405,7 @@
   .board-panel {
     flex: none;
     min-width: 0;
-    padding: 14px 12px;
+    padding: 10px 8px;
   }
 
   .board-row {
@@ -2425,13 +2425,13 @@
 
   .tile-row {
     justify-content: safe center;
-    padding: 8px;
+    padding: 4px;
     overflow-x: auto;
     overscroll-behavior-x: contain;
   }
 
   .board-divider {
-    margin: 12px 0;
+    margin: 8px 0;
   }
 
   .play-actions {
@@ -2446,7 +2446,7 @@
 
   .hand-panel {
     min-width: 0;
-    padding: 16px 12px 12px;
+    padding: 12px 8px 8px;
   }
 
   .touch-command-help {
@@ -2458,41 +2458,43 @@
   }
 
   .hand-cards {
-    justify-content: safe center;
-    gap: 14px;
-    padding: 18px 14px 16px;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scroll-snap-type: x proximity;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px 8px;
+    padding: 8px 4px 6px;
+    overflow: visible;
+    scroll-snap-type: none;
   }
 
   .hand-panel .command-card {
-    flex: 0 0 148px;
-    width: 148px;
-    min-width: 148px;
-    max-width: 148px;
-    min-height: 124px;
-    padding: 17px 12px 11px;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    min-height: 96px;
+    padding: 14px 4px 8px;
   }
 
   .hand-panel .command-card-kicker {
-    font-size: 9px;
-    margin-bottom: 5px;
+    display: none;
   }
 
   .hand-panel .command-card-type {
-    font-size: 18px;
+    font-size: clamp(11px, 3vw, 14px);
+    letter-spacing: 0;
   }
 
   .hand-panel .command-card-parameters {
-    font-size: 15px;
+    font-size: clamp(9px, 2.6vw, 12px);
     margin-top: 5px;
+    white-space: nowrap;
   }
 
   .hand-panel .command-card-assist-area {
     display: flex;
-    min-height: 21px;
-    padding-top: 8px;
+    flex-wrap: wrap;
+    gap: 3px;
+    min-height: 18px;
+    padding-top: 6px;
   }
 
   .result-backdrop {

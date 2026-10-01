@@ -235,6 +235,23 @@
     0 10px 20px rgba(12, 21, 37, 0.22);
 }
 
+@media (max-width: 700px), (hover: none) and (pointer: coarse) {
+  .hand-panel .command-card-assist-label {
+    padding: 3px 4px;
+    font-size: 8px;
+    letter-spacing: 0;
+  }
+
+  .hand-panel .command-card-order-hint {
+    top: -7px;
+    right: -3px;
+    width: 22px;
+    height: 22px;
+    border-width: 2px;
+    font-size: 11px;
+  }
+}
+
 @media (hover: none) and (pointer: coarse) {
   /* Touch browsers may retain :hover after a tap. Selection is explicit. */
   .command-card:hover:not(:disabled) {
