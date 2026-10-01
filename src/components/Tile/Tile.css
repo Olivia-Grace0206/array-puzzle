@@ -89,17 +89,32 @@
 
 @media (max-width: 700px), (hover: none) and (pointer: coarse) {
   .board-panel .tile-wrapper {
-    margin: 7px;
+    /* Eight equal slots in both rows; longer arrays retain internal scrolling. */
+    width: clamp(24px, calc(12.5% - 10px), 40px);
+    margin: 3px 5px;
   }
 
   .board-panel .tile-index {
-    margin-bottom: 5px;
-    font-size: 12px;
+    margin-bottom: 3px;
+    font-size: 10px;
   }
 
   .board-panel .tile {
-    width: 40px;
-    height: 40px;
-    font-size: 22px;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+    border-radius: 7px;
+    font-size: 20px;
+  }
+
+  .board-panel .tile-matched::before {
+    inset: -4px;
+    border-radius: 9px;
+  }
+
+  .board-panel .tile-preview-changed::after {
+    inset: -2px;
+    border-width: 2px;
+    border-radius: 8px;
   }
 }
