@@ -2,7 +2,7 @@ import './CommandCard.css'
 import { useRef } from 'react'
 import {
   hasPointerMoved,
-  resolveCommandInput,
+  resolveCommandClickInput,
   type CommandInput,
 } from '../../app/commandInteraction'
 import type { CommandCard as CommandCardData } from '../../domain/commandCard'
@@ -119,22 +119,17 @@ export function CommandCard({
       }}
       onClick={(event) => {
         if (disabled) return
-        // Keyboard/assistive activation retains the usual single-click action.
-        if (event.detail === 0) {
-          gesture.current = null
-          onActivate?.(card.id, 'mouse')
-          return
-        }
         const start = gesture.current
         gesture.current = null
         if (start?.cancelled) return
-        const pointerType = (event.nativeEvent as PointerEvent).pointerType ||
-          start?.pointerType || ''
-        onActivate?.(card.id, resolveCommandInput(
-          pointerType,
-          window.matchMedia('(any-hover: hover)').matches,
-          window.matchMedia('(pointer: coarse)').matches,
-          navigator.maxTouchPoints > 0,
+        onActivate?.(card.id, resolveCommandClickInput(
+          event.nativeEvent as PointerEvent,
+          start?.pointerType,
+          {
+            canHover: window.matchMedia('(any-hover: hover)').matches,
+            coarsePointer: window.matchMedia('(pointer: coarse)').matches,
+            hasTouch: navigator.maxTouchPoints > 0,
+          },
         ))
       }}
     >
